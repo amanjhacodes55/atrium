@@ -1,0 +1,406 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light;
+  --plane: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --hover: #eef0f4;
+  --ink: #111827;
+  --ink-2: #4b5563;
+  --muted: #8a919e;
+  --line: #e3e6eb;
+  --ring: rgba(37, 99, 235, 0.35);
+  --accent: #2563eb;
+  --accent-ink: #1d4ed8;
+  --accent-wash: rgba(37, 99, 235, 0.1);
+  --danger: #dc2626;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.08);
+  /* One colour per app, used for icons, headers and active states. */
+  --app-doc: #2563eb;
+  --app-sheet: #16a34a;
+  --app-slides: #ea580c;
+  --app-drive: #ca8a04;
+  --app-notebook: #7c3aed;
+  --paper: #ffffff;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane: #0f1115;
+  --surface: #181b21;
+  --surface-2: #20242b;
+  --hover: #262a32;
+  --ink: #eef0f3;
+  --ink-2: #b5bcc8;
+  --muted: #7d8592;
+  --line: #2b3038;
+  --ring: rgba(96, 165, 250, 0.45);
+  --accent: #60a5fa;
+  --accent-ink: #93c5fd;
+  --accent-wash: rgba(96, 165, 250, 0.14);
+  --danger: #f87171;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --app-doc: #60a5fa;
+  --app-sheet: #4ade80;
+  --app-slides: #fb923c;
+  --app-drive: #facc15;
+  --app-notebook: #c084fc;
+  /* Pages stay white in dark mode, like a real sheet of paper on a dark desk. */
+  --paper: #ffffff;
+}
+
+@theme inline {
+  --color-plane: var(--plane);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-hover: var(--hover);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-wash: var(--accent-wash);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, monospace;
+}
+
+html,
+body {
+  background: var(--plane);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- Small component kit ----
+   In the components layer so Tailwind utilities on the same element (pl-10, md:hidden) win. */
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    height: 2.25rem;
+    padding: 0 0.9rem;
+    border-radius: 0.6rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    transition: background 0.12s, border-color 0.12s;
+    white-space: nowrap;
+  }
+  .btn:hover {
+    background: var(--hover);
+  }
+  .btn:disabled {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--accent-ink);
+  }
+  :root[data-theme="dark"] .btn-primary {
+    color: #0b1220;
+  }
+  .btn-ghost {
+    border-color: transparent;
+    background: transparent;
+  }
+  .btn-sm {
+    height: 1.9rem;
+    padding: 0 0.6rem;
+    font-size: 0.8125rem;
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    color: var(--ink-2);
+    transition: background 0.12s;
+  }
+  .icon-btn:hover {
+    background: var(--hover);
+    color: var(--ink);
+  }
+  .icon-btn[data-on="true"] {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+
+  .input {
+    height: 2.5rem;
+    width: 100%;
+    padding: 0 0.8rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.9rem;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--ring);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.9rem;
+  }
+
+  .menu {
+    position: absolute;
+    z-index: 60;
+    min-width: 13rem;
+    padding: 0.35rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .menu-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--ink);
+    text-align: left;
+  }
+  .menu-item:hover {
+    background: var(--hover);
+  }
+  .menu-item svg {
+    color: var(--ink-2);
+  }
+  .menu-sep {
+    height: 1px;
+    margin: 0.3rem 0.2rem;
+    background: var(--line);
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-wrap: wrap;
+    padding: 0.3rem 0.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .toolbar .sep {
+    width: 1px;
+    height: 1.3rem;
+    margin: 0 0.3rem;
+    background: var(--line);
+  }
+  .toolbar select {
+    height: 1.9rem;
+    border-radius: 0.45rem;
+    padding: 0 0.4rem;
+    font-size: 0.8rem;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid transparent;
+  }
+  .toolbar select:hover {
+    border-color: var(--line);
+  }
+}
+
+/* ---- Rich text (Docs and Notebook) ---- */
+
+.prose-atrium {
+  color: #111827;
+  font-size: 11.5pt;
+  line-height: 1.6;
+}
+.prose-atrium:focus {
+  outline: none;
+}
+.prose-atrium > * + * {
+  margin-top: 0.6em;
+}
+.prose-atrium h1 {
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 0.8em;
+}
+.prose-atrium h2 {
+  font-size: 1.5em;
+  font-weight: 650;
+  line-height: 1.25;
+  margin-top: 1em;
+}
+.prose-atrium h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin-top: 0.9em;
+}
+.prose-atrium > :first-child {
+  margin-top: 0;
+}
+.prose-atrium ul {
+  list-style: disc;
+  padding-left: 1.5em;
+}
+.prose-atrium ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+}
+.prose-atrium li > p {
+  margin: 0;
+}
+.prose-atrium blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 1em;
+  color: #4b5563;
+  font-style: italic;
+}
+.prose-atrium code {
+  font-family: var(--font-mono-face), monospace;
+  background: #f3f4f6;
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.prose-atrium pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.8em 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.prose-atrium pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+.prose-atrium a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.prose-atrium hr {
+  border: none;
+  border-top: 1px solid #d1d5db;
+  margin: 1.2em 0;
+}
+.prose-atrium img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+.prose-atrium img.ProseMirror-selectednode {
+  outline: 3px solid #93c5fd;
+}
+.prose-atrium table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  margin: 0.8em 0;
+  overflow: hidden;
+}
+.prose-atrium td,
+.prose-atrium th {
+  border: 1px solid #d1d5db;
+  padding: 0.35em 0.6em;
+  vertical-align: top;
+  position: relative;
+}
+.prose-atrium th {
+  background: #f3f4f6;
+  font-weight: 600;
+  text-align: left;
+}
+.prose-atrium .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(37, 99, 235, 0.12);
+  pointer-events: none;
+}
+.prose-atrium .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #93c5fd;
+  pointer-events: none;
+}
+.prose-atrium.resize-cursor {
+  cursor: col-resize;
+}
+.prose-atrium ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.2em;
+}
+.prose-atrium ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.5em;
+  align-items: flex-start;
+}
+.prose-atrium ul[data-type="taskList"] li > label {
+  margin-top: 0.3em;
+  user-select: none;
+}
+.prose-atrium ul[data-type="taskList"] li > label input {
+  width: 1em;
+  height: 1em;
+  accent-color: #7c3aed;
+}
+.prose-atrium ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+.prose-atrium ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+.prose-atrium p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.prose-atrium mark {
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+}

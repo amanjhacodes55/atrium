@@ -1,0 +1,9 @@
+node_modules
+.next
+.data
+.git
+docs/media
+docs/video
+*.log
+.env*
+!.env.example

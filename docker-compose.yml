@@ -1,0 +1,17 @@
+services:
+  atrium:
+    build: .
+    image: atrium:latest
+    ports:
+      - "3000:3000"
+    environment:
+      # Set to false after creating your accounts to stop strangers signing up.
+      ATRIUM_ALLOW_SIGNUP: ${ATRIUM_ALLOW_SIGNUP:-true}
+      ATRIUM_QUOTA_MB: ${ATRIUM_QUOTA_MB:-500}
+      ATRIUM_MAX_UPLOAD_MB: ${ATRIUM_MAX_UPLOAD_MB:-50}
+    volumes:
+      - atrium-data:/data
+    restart: unless-stopped
+
+volumes:
+  atrium-data:

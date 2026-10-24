@@ -1,0 +1,33 @@
+/* Image resize handles drawn by TipTap's ResizableNodeView. */
+.prose-atrium [data-resize-container] {
+  display: inline-block;
+  position: relative;
+  max-width: 100%;
+}
+.prose-atrium [data-resize-handle] {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #2563eb;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 2;
+}
+.prose-atrium [data-resize-handle="bottom-right"] {
+  cursor: nwse-resize;
+  margin: 0 -6px -6px 0;
+}
+.prose-atrium [data-resize-handle="bottom-left"] {
+  cursor: nesw-resize;
+  margin: 0 0 -6px -6px;
+}
+.prose-atrium [data-resize-container]:hover [data-resize-handle],
+.prose-atrium [data-resize-container].ProseMirror-selectednode [data-resize-handle],
+.prose-atrium [data-resize-state="true"] [data-resize-handle] {
+  opacity: 1;
+}
+.prose-atrium [data-resize-container].ProseMirror-selectednode img {
+  outline: 3px solid #93c5fd;
+}
