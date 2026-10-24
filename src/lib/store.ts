@@ -100,6 +100,17 @@ class NetlifyKV implements KV {
   }
 }
 
+/**
+ * The Blobs client cancels the body of every 404 (`res.body.cancel()`), and under Next.js's patched
+ * fetch on Netlify that promise never settles, so reading a missing key hung until the function
+ * timed out. Reading the body up front gives the client a Response whose cancel returns at once.
+ */
+const bufferedFetch: typeof fetch = async (input, init) => {
+  const res = await fetch(input, { ...init, cache: "no-store" });
+  const body = res.status === 204 || res.status === 304 ? null : await res.arrayBuffer();
+  return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+};
+
 let kv: Promise<KV> | null = null;
 
 export function store(): Promise<KV> {
@@ -107,7 +118,7 @@ export function store(): Promise<KV> {
     // Netlify sets NETLIFY_BLOBS_CONTEXT (or NETLIFY) inside its functions; anywhere else, use disk.
     if (process.env.ATRIUM_STORAGE !== "fs" && (process.env.NETLIFY_BLOBS_CONTEXT || process.env.NETLIFY)) {
       const { getStore } = await import("@netlify/blobs");
-      return new NetlifyKV(getStore({ name: "atrium", consistency: "strong" }));
+      return new NetlifyKV(getStore({ name: "atrium", consistency: "strong", fetch: bufferedFetch }));
     }
     return new FileKV(path.resolve(process.env.ATRIUM_DATA_DIR || ".data"));
   })();
