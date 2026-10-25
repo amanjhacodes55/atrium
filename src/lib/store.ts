@@ -120,7 +120,8 @@ export function store(): Promise<KV> {
       const { getStore } = await import("@netlify/blobs");
       return new NetlifyKV(getStore({ name: "atrium", consistency: "strong", fetch: bufferedFetch }));
     }
-    return new FileKV(path.resolve(process.env.ATRIUM_DATA_DIR || ".data"));
+    // A runtime folder, not part of the build: keep the file tracer from bundling the whole project.
+    return new FileKV(path.resolve(/*turbopackIgnore: true*/ process.env.ATRIUM_DATA_DIR || ".data"));
   })();
   return kv;
 }
