@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local Netlify builds and demo-video takes.
+    ".netlify/**",
+    "docs/video/build/**",
     // Generated on install from @rrweb/record.
     "public/rrweb-record.js",
   ]),

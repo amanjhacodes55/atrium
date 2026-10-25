@@ -11,7 +11,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { BASE, guest, launch, newContext, pointer, sleep, startRecording } from "./rec.mjs";
+import { BASE, launch, newContext, pointer, sleep, startRecording } from "./rec.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BUILD = path.join(HERE, "build");
