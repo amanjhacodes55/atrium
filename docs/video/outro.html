@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: grid; place-items: center; overflow: hidden;
+    background: radial-gradient(ellipse at 30% 30%, #1c2540 0%, #12141a 55%, #0b0c10 100%);
+    color: #f1f2f5; font-family: "Inter", sans-serif;
+  }
+  .wrap { text-align: center; }
+  .wrap > * { opacity: 0; transform: translateY(14px); transition: opacity .8s ease, transform .8s ease; }
+  body.in .wrap > * { opacity: 1; transform: none; }
+  body.in .wrap > :nth-child(2) { transition-delay: .15s; }
+  body.in .wrap > :nth-child(3) { transition-delay: .35s; }
+  body.in .wrap > :nth-child(4) { transition-delay: .55s; }
+  body.in .wrap > :nth-child(5) { transition-delay: .75s; }
+  .brand { display: inline-flex; align-items: center; gap: 24px; }
+  .brand svg { width: 92px; height: 92px; }
+  h1 { margin: 0; font: 700 92px/1 "Inter", sans-serif; letter-spacing: -3px; }
+  .tag { margin: 26px 0 0; font-size: 30px; font-weight: 500; color: #c6c9d2; }
+  .apps { margin-top: 28px; display: flex; gap: 14px; justify-content: center; }
+  .apps span { padding: 8px 16px; border-radius: 999px; font-size: 20px; font-weight: 600; background: rgba(255,255,255,.07); }
+  .rule { width: 90px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, #3b82f6, #a855f7, #f97316); margin: 34px auto; }
+  .links { font-size: 22px; line-height: 1.8; color: #a4a8b3; }
+  .links b { color: #fff; font-weight: 500; font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#f1f2f5" /><rect x="6" y="6" width="9" height="9" rx="2.2" fill="#3b82f6" /><rect x="17" y="6" width="9" height="9" rx="2.2" fill="#22c55e" /><rect x="6" y="17" width="9" height="9" rx="2.2" fill="#f97316" /><rect x="17" y="17" width="9" height="9" rx="2.2" fill="#a855f7" /></svg>
+      <h1>Atrium</h1>
+    </div>
+    <p class="tag">Your whole office, in one open app · AGPL licensed</p>
+    <div class="apps"><span style="color:#60a5fa">Docs</span><span style="color:#4ade80">Sheets</span><span style="color:#fb923c">Slides</span><span style="color:#facc15">Drive</span><span style="color:#c084fc">Notebook</span></div>
+    <div class="rule"></div>
+    <div class="links">
+      <div><b>github.com/amanjhacodes55/atrium</b></div>
+      <div>One click to Netlify, or self-host with Docker</div>
+    </div>
+  </div>
+</body>
+</html>

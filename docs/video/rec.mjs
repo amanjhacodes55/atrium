@@ -122,7 +122,7 @@ export function pointer(page) {
   return self;
 }
 
-/** Records a page through the DevTools screencast. stop() writes a constant-30fps mp4. */
+/** Records a page through the DevTools screencast. stop() writes a constant-30fps mp4 (1920x1080 unless told). */
 export async function startRecording(page) {
   const cdp = await page.context().newCDPSession(page);
   const frames = [];
@@ -134,7 +134,7 @@ export async function startRecording(page) {
   await cdp.send("Page.startScreencast", { format: "jpeg", quality: 92, maxWidth: 1920, maxHeight: 1080, everyNthFrame: 1 });
   return {
     t0,
-    async stop(out) {
+    async stop(out, { width = 1920, height = 1080 } = {}) {
       const tEnd = Date.now() / 1000;
       await cdp.send("Page.stopScreencast").catch(() => {});
       await cdp.detach().catch(() => {});
@@ -154,7 +154,7 @@ export async function startRecording(page) {
       list += `file '${path.join(dir, `${String(frames.length - 1).padStart(5, "0")}.jpg`)}'\n`;
       fs.writeFileSync(path.join(dir, "list.txt"), list);
       execFileSync("ffmpeg", ["-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", path.join(dir, "list.txt"),
-        "-vf", "scale=1920:1080:flags=lanczos,fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "medium", "-crf", "16", out]);
+        "-vf", `scale=${width}:${height}:flags=lanczos,fps=30,format=yuv420p`, "-c:v", "libx264", "-preset", "medium", "-crf", "16", out]);
       fs.rmSync(dir, { recursive: true, force: true });
       return tEnd - t0;
     },
