@@ -1,5 +1,5 @@
 import type { CellStyle, SheetTab } from "../types";
-import { colIndex, colName, parseA1, toA1, type Range } from "./a1";
+import { colIndex, colName, parseA1, parseRange, rangeA1, toA1, type Range } from "./a1";
 import { isError, type Value } from "./format";
 
 // Pure edits on a sheet tab. Every function returns a new tab and leaves its input alone.
@@ -235,4 +235,44 @@ export function jump(cells: Record<string, string>, from: { r: number; c: number
     c += dc;
   }
   return { r, c };
+}
+
+/** Borders on a range: every cell edge, only the outline, or none. */
+export function borderRange(tab: SheetTab, g: Range, mode: "all" | "outer" | "none", color = "#111827"): SheetTab {
+  const styles = { ...tab.styles };
+  for (let r = g.r1; r <= g.r2; r++) {
+    for (let c = g.c1; c <= g.c2; c++) {
+      const k = toA1(r, c);
+      const next: CellStyle = { ...styles[k] };
+      if (mode === "none") delete next.border;
+      else if (mode === "all") next.border = { t: color, r: color, b: color, l: color };
+      else {
+        const b = { ...next.border };
+        if (r === g.r1) b.t = color;
+        if (r === g.r2) b.b = color;
+        if (c === g.c1) b.l = color;
+        if (c === g.c2) b.r = color;
+        next.border = b;
+      }
+      if (Object.keys(next).length) styles[k] = next;
+      else delete styles[k];
+    }
+  }
+  return { ...tab, styles };
+}
+
+/**
+ * Merges a range, or unmerges any merge it touches. Like Excel, merging keeps only the top-left
+ * value; the rest of the range is cleared.
+ */
+export function toggleMerge(tab: SheetTab, g: Range): SheetTab {
+  const overlaps = (tab.merges ?? []).filter((ref) => {
+    const m = parseRange(ref);
+    return m && m.r1 <= g.r2 && m.r2 >= g.r1 && m.c1 <= g.c2 && m.c2 >= g.c1;
+  });
+  if (overlaps.length) return { ...tab, merges: (tab.merges ?? []).filter((m) => !overlaps.includes(m)) };
+  if (g.r1 === g.r2 && g.c1 === g.c2) return tab;
+  const cells = { ...tab.cells };
+  for (let r = g.r1; r <= g.r2; r++) for (let c = g.c1; c <= g.c2; c++) if (r !== g.r1 || c !== g.c1) delete cells[toA1(r, c)];
+  return { ...tab, cells, merges: [...(tab.merges ?? []), rangeA1(g)] };
 }

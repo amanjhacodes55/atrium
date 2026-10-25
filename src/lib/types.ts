@@ -41,16 +41,33 @@ export type CellStyle = {
   b?: boolean;
   i?: boolean;
   u?: boolean;
+  /** Strikethrough. */
+  s?: boolean;
   align?: "left" | "center" | "right";
+  /** Vertical alignment; like Excel and Google Sheets, cells sit at the bottom when unset. */
+  valign?: "top" | "middle" | "bottom";
+  /** Wrap long text onto more lines; the row grows to fit. */
+  wrap?: boolean;
   color?: string;
   bg?: string;
+  /** Font size in points (10 when unset) and family. */
+  size?: number;
+  font?: string;
+  /** Cell borders as CSS colours, drawn 1px solid on each named side. */
+  border?: { t?: string; r?: string; b?: string; l?: string };
   fmt?: "general" | "number" | "currency" | "percent" | "date";
+  /** An exact Excel number format code (e.g. "#,##0.00;[Red](#,##0.00)"); wins over fmt. */
+  numFmt?: string;
 };
 export type SheetTab = {
   name: string;
   cells: Record<string, string>;
   styles: Record<string, CellStyle>;
   colWidths: Record<number, number>;
+  /** Row heights in px where they differ from the default. Wrapped text can make a row taller. */
+  rowHeights?: Record<number, number>;
+  /** Merged ranges in A1 notation ("A1:C2"); the top-left cell holds the value. */
+  merges?: string[];
   frozen?: { rows: number; cols: number };
 };
 export type SheetBody = { type: "sheet"; sheets: SheetTab[] };

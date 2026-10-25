@@ -1,6 +1,6 @@
 import type { HyperFormula } from "hyperformula";
 import type { SheetTab } from "../types";
-import { parseA1, toA1 } from "./a1";
+import { parseA1, parseRange, rangeA1, toA1 } from "./a1";
 import type { Value } from "./format";
 
 // HyperFormula computes everything: ~400 Excel functions, cross-sheet references and dependency
@@ -15,7 +15,11 @@ export type Computed = Record<string, Value>[];
 
 let mod: Promise<HFModule> | null = null;
 export function loadEngine(): Promise<HFModule> {
-  mod ??= import("hyperformula");
+  // The extra functions (CONCAT, TEXTBEFORE, REGEXMATCH…) register once, with the module.
+  mod ??= Promise.all([import("hyperformula"), import("./functions")]).then(([hf, f]) => {
+    f.registerFunctions(hf);
+    return hf;
+  });
   return mod;
 }
 
@@ -128,14 +132,39 @@ export function structural(hf: HFModule, sheets: SheetTab[], index: number, chan
         if (k) styles[k] = s;
       }
       let colWidths = tab.colWidths;
-      if (!rows) {
-        colWidths = {};
-        for (const [c, w] of Object.entries(tab.colWidths)) {
-          const n = move(Number(c));
-          if (n !== null) colWidths[n] = w;
+      let rowHeights = tab.rowHeights;
+      const shiftSizes = (sizes: Record<number, number>) => {
+        const out: Record<number, number> = {};
+        for (const [k, v] of Object.entries(sizes)) {
+          const n = move(Number(k));
+          if (n !== null) out[n] = v;
         }
-      }
-      return { ...tab, cells, styles, colWidths };
+        return out;
+      };
+      if (!rows) colWidths = shiftSizes(tab.colWidths);
+      else if (tab.rowHeights) rowHeights = shiftSizes(tab.rowHeights);
+      // A merge moves with its rows or columns, grows when lines are inserted inside it, and
+      // shrinks (or goes, when only one cell is left) when they are deleted.
+      const merges = tab.merges?.flatMap((ref) => {
+        const g = parseRange(ref);
+        if (!g) return [];
+        const [a, b] = rows ? [g.r1, g.r2] : [g.c1, g.c2];
+        let na = a;
+        let nb = b;
+        const clamp = (v: number) => Math.max(0, Math.min(change.count, v));
+        if (remove) {
+          // Each end moves up by the deleted lines before it (a deleted start lands on the gap).
+          na = a - clamp(a - change.at);
+          nb = b - clamp(b - change.at + 1);
+          if (nb < na) return [];
+        } else {
+          if (a >= change.at) na = a + change.count;
+          if (b >= change.at) nb = b + change.count;
+        }
+        const n = rows ? { ...g, r1: na, r2: nb } : { ...g, c1: na, c2: nb };
+        return n.r1 === n.r2 && n.c1 === n.c2 ? [] : [rangeA1(n)];
+      });
+      return { ...tab, cells, styles, colWidths, rowHeights, merges };
     });
   } finally {
     engine.destroy();

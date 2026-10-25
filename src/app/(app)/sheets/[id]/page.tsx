@@ -20,7 +20,14 @@ import {
   Rows3,
   Sigma,
   Snowflake,
+  Strikethrough,
   Underline,
+  WrapText,
+  Merge,
+  Grid2x2,
+  AlignVerticalJustifyStart,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
   Undo2,
 } from "lucide-react";
 import { downloadIcon, EditorHeader, useAutosave } from "@/components/editor-shell";
@@ -31,7 +38,7 @@ import { downloadBlob, drive, pickFile, safeFileName } from "@/lib/client";
 import { normRange, parseA1, parseRange, rangeA1, toA1, usedRange, type Range } from "@/lib/sheets/a1";
 import { compute, loadEngine, removeSheet, renameSheet, structural, type Computed, type HFModule, type Structural } from "@/lib/sheets/engine";
 import { plainValue, type Value } from "@/lib/sheets/format";
-import { clearRange, fill, jump, nextSheetName, parseDelimited, pasteGrid, rawGrid, setCells, sortRange, styleRange, toDelimited } from "@/lib/sheets/ops";
+import { borderRange, clearRange, fill, jump, nextSheetName, parseDelimited, pasteGrid, rawGrid, setCells, sortRange, styleRange, toDelimited, toggleMerge } from "@/lib/sheets/ops";
 import type { CellStyle, Item, SheetBody, SheetTab } from "@/lib/types";
 
 const MIN_ROWS = 1000;
@@ -39,7 +46,15 @@ const MIN_COLS = 52;
 
 /** Older or imported bodies may miss optional parts; fill them in once on load. */
 function normalize(body: SheetBody): SheetTab[] {
-  const tabs = (body.sheets ?? []).map((t, i) => ({ name: t.name || `Sheet${i + 1}`, cells: t.cells ?? {}, styles: t.styles ?? {}, colWidths: t.colWidths ?? {}, frozen: t.frozen }));
+  const tabs = (body.sheets ?? []).map((t, i) => ({
+    name: t.name || `Sheet${i + 1}`,
+    cells: t.cells ?? {},
+    styles: t.styles ?? {},
+    colWidths: t.colWidths ?? {},
+    rowHeights: t.rowHeights,
+    merges: t.merges,
+    frozen: t.frozen,
+  }));
   return tabs.length ? tabs : [{ name: "Sheet1", cells: {}, styles: {}, colWidths: {} }];
 }
 
@@ -395,7 +410,11 @@ function SheetEditor({ item, setItem, initial, hf }: { item: Item; setItem: (i: 
   }, [values, g.r1, g.r2, g.c1, g.c2]);
 
   const anchorRaw = tab.cells[toA1(sel.anchor.r, sel.anchor.c)] ?? "";
-  const frozenOn = Boolean(tab.frozen?.rows);
+  const frozenOn = Boolean(tab.frozen?.rows || tab.frozen?.cols);
+  const mergedHere = (tab.merges ?? []).some((ref) => {
+    const m = parseRange(ref);
+    return m && m.r1 <= g.r2 && m.r2 >= g.r1 && m.c1 <= g.c2 && m.c2 >= g.c1;
+  });
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
@@ -409,7 +428,12 @@ function SheetEditor({ item, setItem, initial, hf }: { item: Item; setItem: (i: 
           <Redo2 size={16} />
         </Btn>
         <span className="sep" />
-        <select aria-label="Number format" value={first.fmt ?? "general"} onChange={(e) => style({ fmt: e.target.value as CellStyle["fmt"] })}>
+        <select aria-label="Number format" value={first.numFmt ? "custom" : (first.fmt ?? "general")} onChange={(e) => style({ fmt: e.target.value as CellStyle["fmt"], numFmt: undefined })}>
+          {first.numFmt && (
+            <option value="custom" disabled>
+              {first.numFmt.length > 18 ? `${first.numFmt.slice(0, 18)}…` : first.numFmt}
+            </option>
+          )}
           <option value="general">General</option>
           <option value="number">Number 1,000.00</option>
           <option value="currency">Currency $</option>
@@ -426,6 +450,16 @@ function SheetEditor({ item, setItem, initial, hf }: { item: Item; setItem: (i: 
         <Btn label="Underline (Ctrl+U)" on={first.u} onClick={() => toggle("u")}>
           <Underline size={16} />
         </Btn>
+        <Btn label="Strikethrough" on={first.s} onClick={() => style({ s: !first.s })}>
+          <Strikethrough size={16} />
+        </Btn>
+        <select aria-label="Font size" value={first.size ?? 10} onChange={(e) => style({ size: Number(e.target.value) === 10 ? undefined : Number(e.target.value) })} id="font-size">
+          {[8, 9, 10, 11, 12, 14, 16, 18, 24, 30, 36].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
         <ColorBtn label="Text colour" value={first.color ?? "#111827"} onChange={(color) => style({ color })}>
           <Baseline size={16} />
         </ColorBtn>
@@ -442,6 +476,42 @@ function SheetEditor({ item, setItem, initial, hf }: { item: Item; setItem: (i: 
         <Btn label="Align right" on={first.align === "right"} onClick={() => style({ align: first.align === "right" ? undefined : "right" })}>
           <AlignRight size={16} />
         </Btn>
+        <Dropdown
+          label="Vertical alignment"
+          className="icon-btn !w-auto gap-0.5 px-1.5"
+          trigger={
+            <>
+              {first.valign === "top" ? <AlignVerticalJustifyStart size={16} /> : first.valign === "middle" ? <AlignVerticalJustifyCenter size={16} /> : <AlignVerticalJustifyEnd size={16} />}
+              <ChevronDown size={12} />
+            </>
+          }
+          items={[
+            { label: "Top", onClick: () => style({ valign: "top" }) },
+            { label: "Middle", onClick: () => style({ valign: "middle" }) },
+            { label: "Bottom", onClick: () => style({ valign: undefined }) },
+          ]}
+        />
+        <Btn label="Wrap text" on={first.wrap} onClick={() => style({ wrap: !first.wrap })}>
+          <WrapText size={16} />
+        </Btn>
+        <Btn label={mergedHere ? "Unmerge cells" : "Merge cells"} on={mergedHere} onClick={() => applyTab((t) => toggleMerge(t, g))}>
+          <Merge size={16} />
+        </Btn>
+        <Dropdown
+          label="Borders"
+          className="icon-btn !w-auto gap-0.5 px-1.5"
+          trigger={
+            <>
+              <Grid2x2 size={16} />
+              <ChevronDown size={12} />
+            </>
+          }
+          items={[
+            { label: "All borders", onClick: () => applyTab((t) => borderRange(t, g, "all")) },
+            { label: "Outside border", onClick: () => applyTab((t) => borderRange(t, g, "outer")) },
+            { label: "No borders", onClick: () => applyTab((t) => borderRange(t, g, "none")) },
+          ]}
+        />
         <span className="sep" />
         <Dropdown
           label="Insert rows or columns"
@@ -473,9 +543,22 @@ function SheetEditor({ item, setItem, initial, hf }: { item: Item; setItem: (i: 
             { label: "Delete column(s)", danger: true, onClick: () => doStructural({ op: "removeColumns", at: g.c1, count: g.c2 - g.c1 + 1 }) },
           ]}
         />
-        <Btn label={frozenOn ? "Unfreeze top row" : "Freeze top row"} on={frozenOn} onClick={() => applyTab((t) => ({ ...t, frozen: frozenOn ? undefined : { rows: 1, cols: 0 } }))}>
-          <Snowflake size={16} />
-        </Btn>
+        <Dropdown
+          label="Freeze"
+          className={`icon-btn !w-auto gap-0.5 px-1.5 ${frozenOn ? "on" : ""}`}
+          trigger={
+            <>
+              <Snowflake size={16} />
+              <ChevronDown size={12} />
+            </>
+          }
+          items={[
+            { label: "Freeze top row", onClick: () => applyTab((t) => ({ ...t, frozen: { rows: 1, cols: t.frozen?.cols ?? 0 } })) },
+            { label: "Freeze first column", onClick: () => applyTab((t) => ({ ...t, frozen: { rows: t.frozen?.rows ?? 0, cols: 1 } })) },
+            { label: `Freeze up to ${toA1(sel.anchor.r, sel.anchor.c)}`, onClick: () => applyTab((t) => ({ ...t, frozen: { rows: sel.anchor.r, cols: sel.anchor.c } })) },
+            { label: "Unfreeze", onClick: () => applyTab((t) => ({ ...t, frozen: undefined })) },
+          ]}
+        />
         <span className="sep" />
         <Btn label="Sort A → Z" onClick={() => sort(false)}>
           <ArrowDownAZ size={16} />

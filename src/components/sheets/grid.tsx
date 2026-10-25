@@ -1,15 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { colName, normRange, rangeA1, toA1, type Pos, type Range } from "@/lib/sheets/a1";
-import { formatValue, type Value } from "@/lib/sheets/format";
+import { formatCell, type Value } from "@/lib/sheets/format";
 import type { SheetTab } from "@/lib/types";
+import { autoHeights, indexAt, mergeMap, ROW_H, rowTops } from "./layout";
 import { cellCss, DEFAULT_COL } from "./sheet-table";
 
 // A virtualized spreadsheet grid: only the cells in view are rendered, so 1,000+ rows by 52+
-// columns scroll smoothly. Headers and frozen rows live outside the scroller and follow its offset.
+// columns scroll smoothly. Rows can differ in height (explicit, or grown to fit wrapped text), cells
+// can be merged, and the top rows and left columns can be frozen. Four panes do that: the frozen
+// corner, the frozen rows (scroll sideways), the frozen columns (scroll up and down) and the body.
 
-export const ROW_H = 24;
+export { ROW_H };
 const HEAD_W = 46;
 const HEAD_H = 24;
 
@@ -80,8 +83,14 @@ export function Grid({
     for (const w of widths) x.push(x[x.length - 1] + w);
     return x;
   }, [widths]);
+  const merges = useMemo(() => mergeMap(tab), [tab]);
+  const auto = useMemo(() => autoHeights(tab, values, widths, merges.covered, merges.masters), [tab, values, widths, merges]);
+  const rowY = useMemo(() => rowTops(rows, (r) => tab.rowHeights?.[r] ?? auto[r] ?? ROW_H), [rows, tab.rowHeights, auto]);
+  const rowH = (r: number) => rowY[r + 1] - rowY[r];
   const frozen = Math.min(tab.frozen?.rows ?? 0, rows);
-  const frozenH = frozen * ROW_H;
+  const frozenC = Math.min(tab.frozen?.cols ?? 0, cols);
+  const frozenH = rowY[frozen];
+  const frozenW = colX[frozenC];
   const g = normRange(sel.anchor, sel.head);
 
   useEffect(() => {
@@ -92,48 +101,41 @@ export function Grid({
     return () => ro.disconnect();
   }, []);
 
-  const colAt = useCallback(
-    (x: number) => {
-      let lo = 0;
-      let hi = cols - 1;
-      while (lo < hi) {
-        const mid = (lo + hi + 1) >> 1;
-        if (colX[mid] <= x) lo = mid;
-        else hi = mid - 1;
-      }
-      return lo;
-    },
-    [colX, cols],
-  );
+  const colAt = useCallback((x: number) => indexAt(colX, cols, x), [colX, cols]);
+  const rowAt = useCallback((y: number) => indexAt(rowY, rows, y), [rowY, rows]);
 
   // Keep the moving end of the selection in view.
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
     const { r, c } = sel.head;
-    const x1 = colX[c];
-    const x2 = colX[c + 1] ?? x1;
-    if (x1 < el.scrollLeft) el.scrollLeft = x1;
-    else if (x2 > el.scrollLeft + el.clientWidth) el.scrollLeft = x2 - el.clientWidth;
-    if (r >= frozen) {
-      const y1 = (r - frozen) * ROW_H;
-      if (y1 < el.scrollTop) el.scrollTop = y1;
-      else if (y1 + ROW_H > el.scrollTop + el.clientHeight) el.scrollTop = y1 + ROW_H - el.clientHeight;
+    if (c >= frozenC) {
+      const x1 = colX[c] - frozenW;
+      const x2 = (colX[c + 1] ?? colX[c]) - frozenW;
+      if (x1 < el.scrollLeft) el.scrollLeft = x1;
+      else if (x2 > el.scrollLeft + el.clientWidth) el.scrollLeft = x2 - el.clientWidth;
     }
-  }, [sel.head, colX, frozen]);
+    if (r >= frozen) {
+      const y1 = rowY[r] - frozenH;
+      const y2 = rowY[r + 1] - frozenH;
+      if (y1 < el.scrollTop) el.scrollTop = y1;
+      else if (y2 > el.scrollTop + el.clientHeight) el.scrollTop = y2 - el.clientHeight;
+    }
+  }, [sel.head, colX, rowY, frozen, frozenC, frozenH, frozenW]);
 
   /** Cell under a viewport point, clamped to the sheet. */
   const cellAt = useCallback(
     (clientX: number, clientY: number): Pos => {
       const root = rootRef.current!.getBoundingClientRect();
       const el = scroller.current!;
-      const x = clientX - root.left - HEAD_W;
-      const y = clientY - root.top - HEAD_H;
-      const c = colAt(Math.max(0, x) + el.scrollLeft);
-      const r = y < frozenH ? Math.max(0, Math.floor(y / ROW_H)) : frozen + Math.floor((y - frozenH + el.scrollTop) / ROW_H);
+      const x = Math.max(0, clientX - root.left - HEAD_W);
+      const y = Math.max(0, clientY - root.top - HEAD_H);
+      // The frozen panes don't scroll; the body is offset by both the scroll and the frozen size.
+      const c = x < frozenW ? colAt(x) : colAt(x - (frozenC ? 2 : 0) + el.scrollLeft);
+      const r = y < frozenH ? rowAt(y) : rowAt(y - (frozen ? 2 : 0) + el.scrollTop);
       return { r: Math.min(rows - 1, Math.max(0, r)), c: Math.min(cols - 1, c) };
     },
-    [rootRef, colAt, frozen, frozenH, rows, cols],
+    [rootRef, colAt, rowAt, frozen, frozenC, frozenH, frozenW, rows, cols],
   );
 
   useEffect(() => {
@@ -255,44 +257,79 @@ export function Grid({
   };
 
   // ---- Rendering ----
+  // Every pane renders in sheet coordinates (colX/rowY) shifted by its own origin.
 
-  const c0 = colAt(scroll.l);
-  let c1 = c0;
-  while (c1 < cols - 1 && colX[c1 + 1] < scroll.l + view.w) c1++;
-  const r0 = frozen + Math.floor(scroll.t / ROW_H);
-  const r1 = Math.min(rows - 1, frozen + Math.ceil((scroll.t + view.h) / ROW_H));
+  const bodyC0 = Math.max(frozenC, colAt(frozenW + scroll.l));
+  let bodyC1 = bodyC0;
+  while (bodyC1 < cols - 1 && colX[bodyC1 + 1] < frozenW + scroll.l + view.w) bodyC1++;
+  const bodyR0 = Math.max(frozen, rowAt(frozenH + scroll.t));
+  let bodyR1 = bodyR0;
+  while (bodyR1 < rows - 1 && rowY[bodyR1 + 1] < frozenH + scroll.t + view.h) bodyR1++;
 
-  const cell = (r: number, c: number, top: number) => {
+  type Pane = { r1: number; r2: number; c1: number; c2: number; ox: number; oy: number };
+  const panes = {
+    corner: { r1: 0, r2: frozen - 1, c1: 0, c2: frozenC - 1, ox: 0, oy: 0 },
+    top: { r1: 0, r2: frozen - 1, c1: bodyC0, c2: bodyC1, ox: frozenW, oy: 0 },
+    left: { r1: bodyR0, r2: bodyR1, c1: 0, c2: frozenC - 1, ox: 0, oy: frozenH },
+    body: { r1: bodyR0, r2: bodyR1, c1: bodyC0, c2: bodyC1, ox: frozenW, oy: frozenH },
+  } satisfies Record<string, Pane>;
+  const paneOf = (r: number, c: number) => (r < frozen ? (c < frozenC ? panes.corner : panes.top) : c < frozenC ? panes.left : panes.body);
+
+  /** A cell's box in its pane, spanning the whole merge when it is a merge's top-left cell. */
+  const box = (r: number, c: number, p: Pane) => {
+    const span = merges.masters.get(toA1(r, c));
+    const r2 = span ? span.r2 : r;
+    const c2 = span ? span.c2 : c;
+    return { left: colX[c] - p.ox, top: rowY[r] - p.oy, width: colX[c2 + 1] - colX[c], height: rowY[r2 + 1] - rowY[r] };
+  };
+
+  const cell = (r: number, c: number, p: Pane) => {
     const key = toA1(r, c);
     const raw = tab.cells[key];
     const v: Value = values[key] ?? (raw === undefined ? null : raw);
     const s = tab.styles[key];
+    const valign = s?.valign === "top" ? "flex-start" : s?.valign === "middle" ? "center" : "flex-end";
     return (
       <div
         key={key}
-        className="absolute overflow-hidden whitespace-nowrap border-b border-r border-[#e5e7eb] px-1 leading-[23px]"
-        style={{ left: colX[c], top, width: widths[c], height: ROW_H, ...cellCss(v, s), background: s?.bg ?? "#ffffff" }}
+        className={`absolute flex overflow-hidden border-b border-r border-[#e5e7eb] px-1 ${s?.wrap ? "" : "whitespace-nowrap"}`}
+        style={{ ...box(r, c, p), ...cellCss(v, s), background: s?.bg ?? "#ffffff", alignItems: valign, lineHeight: 1.3, paddingBottom: valign === "flex-end" ? 3 : undefined }}
       >
-        {formatValue(v, s?.fmt)}
+        <span className={`min-w-0 flex-1 ${s?.wrap ? "whitespace-pre-wrap break-words" : "overflow-hidden"}`}>{formatCell(v, s)}</span>
       </div>
     );
   };
 
-  const cellsIn = (ra: number, rb: number, top: (r: number) => number) => {
+  /** The cells of a pane. A merge whose top-left cell is out of view still draws, once. */
+  const cellsIn = (p: Pane) => {
     const out = [];
-    for (let r = ra; r <= rb; r++) for (let c = c0; c <= c1; c++) out.push(cell(r, c, top(r)));
+    const drawn = new Set<string>();
+    for (let r = p.r1; r <= p.r2; r++)
+      for (let c = p.c1; c <= p.c2; c++) {
+        const key = toA1(r, c);
+        const master = merges.owner.get(key);
+        if (!master) out.push(cell(r, c, p));
+        else if (!drawn.has(master)) {
+          drawn.add(master);
+          const m = merges.masters.get(master)!;
+          if (m.r1 < p.r1 || m.c1 < p.c1) out.push(cell(m.r1, m.c1, p));
+        }
+        if (merges.masters.has(key)) drawn.add(key);
+      }
     return out;
   };
 
-  /** Selection, active cell, fill handle and editor for one layer (frozen band or body). */
-  const overlay = (layerR1: number, layerR2: number, top: (r: number) => number) => {
+  /** Selection, active cell, fill handle and editor for one pane. */
+  const overlay = (p: Pane) => {
     const out = [];
-    const ra = Math.max(g.r1, layerR1);
-    const rb = Math.min(g.r2, layerR2);
-    if (ra <= rb) {
-      const box: CSSProperties = { left: colX[g.c1], top: top(ra), width: colX[g.c2 + 1] - colX[g.c1], height: (rb - ra + 1) * ROW_H };
-      out.push(<div key="sel" className="pointer-events-none absolute z-10 border border-[#2563eb] bg-[#2563eb]/10" style={box} />);
-      if (g.r2 <= layerR2 && !edit)
+    const ra = Math.max(g.r1, p.r1);
+    const rb = Math.min(g.r2, p.r2);
+    const ca = Math.max(g.c1, p.c1);
+    const cb = Math.min(g.c2, p.c2);
+    if (ra <= rb && ca <= cb) {
+      const sbox: CSSProperties = { left: colX[ca] - p.ox, top: rowY[ra] - p.oy, width: colX[cb + 1] - colX[ca], height: rowY[rb + 1] - rowY[ra] };
+      out.push(<div key="sel" className="pointer-events-none absolute z-10 border border-[#2563eb] bg-[#2563eb]/10" style={sbox} />);
+      if (g.r2 <= p.r2 && g.c2 <= p.c2 && !edit)
         out.push(
           <div
             key="fill"
@@ -303,26 +340,29 @@ export function Grid({
               drag.current = { mode: "fill", src: g };
             }}
             className="absolute z-20 h-[8px] w-[8px] cursor-crosshair border border-white bg-[#2563eb]"
-            style={{ left: colX[g.c2 + 1] - 5, top: top(g.r2) + ROW_H - 5 }}
+            style={{ left: colX[g.c2 + 1] - p.ox - 5, top: rowY[g.r2 + 1] - p.oy - 5 }}
           />,
         );
     }
     if (fillTo) {
-      const fa = Math.max(fillTo.r1, layerR1);
-      const fb = Math.min(fillTo.r2, layerR2);
-      if (fa <= fb)
+      const fa = Math.max(fillTo.r1, p.r1);
+      const fb = Math.min(fillTo.r2, p.r2);
+      const fc = Math.max(fillTo.c1, p.c1);
+      const fd = Math.min(fillTo.c2, p.c2);
+      if (fa <= fb && fc <= fd)
         out.push(
           <div
             key="fillto"
             className="pointer-events-none absolute z-10 border-2 border-dashed border-[#2563eb]"
-            style={{ left: colX[fillTo.c1], top: top(fa), width: colX[fillTo.c2 + 1] - colX[fillTo.c1], height: (fb - fa + 1) * ROW_H }}
+            style={{ left: colX[fc] - p.ox, top: rowY[fa] - p.oy, width: colX[fd + 1] - colX[fc], height: rowY[fb + 1] - rowY[fa] }}
           />,
         );
     }
     const a = sel.anchor;
-    if (a.r >= layerR1 && a.r <= layerR2) {
+    if (paneOf(a.r, a.c) === p) {
       const s = tab.styles[toA1(a.r, a.c)];
-      const pos: CSSProperties = { left: colX[a.c] - 1, top: top(a.r) - 1, height: ROW_H + 1, minWidth: widths[a.c] + 1 };
+      const b = box(a.r, a.c, p);
+      const pos: CSSProperties = { left: b.left - 1, top: b.top - 1, height: Math.max(ROW_H, b.height) + 1, minWidth: b.width + 1 };
       if (edit?.source === "cell")
         out.push(
           <input
@@ -334,7 +374,7 @@ export function Grid({
             onKeyDown={onEditKey}
             onMouseDown={(e) => e.stopPropagation()}
             className="absolute z-30 border-2 border-[#2563eb] bg-white px-1 text-[13px] text-[#111827] outline-none"
-            style={{ ...pos, width: Math.max(widths[a.c] + 1, edit.text.length * 7.5 + 16), fontWeight: s?.b ? 600 : undefined, fontStyle: s?.i ? "italic" : undefined }}
+            style={{ ...pos, width: Math.max(b.width + 1, edit.text.length * 7.5 + 16), fontWeight: s?.b ? 600 : undefined, fontStyle: s?.i ? "italic" : undefined }}
           />,
         );
       else if (edit)
@@ -343,7 +383,7 @@ export function Grid({
             {edit.text}
           </div>,
         );
-      else out.push(<div key="active" className="pointer-events-none absolute z-20 border-2 border-[#2563eb]" style={{ ...pos, width: widths[a.c] + 1 }} />);
+      else out.push(<div key="active" className="pointer-events-none absolute z-20 border-2 border-[#2563eb]" style={{ ...pos, width: b.width + 1 }} />);
     }
     return out;
   };
@@ -351,41 +391,46 @@ export function Grid({
   const headCls = (on: boolean) =>
     `absolute flex select-none items-center justify-center border-b border-r border-line text-[11px] ${on ? "bg-accent-wash font-semibold text-accent" : "bg-surface-2 text-ink-2"}`;
 
-  const colHeaders = [];
-  for (let c = c0; c <= c1; c++) {
-    colHeaders.push(
-      <div
-        key={c}
-        className={headCls(c >= g.c1 && c <= g.c2)}
-        style={{ left: colX[c], top: 0, width: widths[c], height: HEAD_H }}
-        onMouseDown={(e) => {
-          e.preventDefault();
-          if (edit) actions.commit(edit.text, [0, 0]);
-          rootRef.current?.focus();
-          const anchor = e.shiftKey ? { r: 0, c: sel.anchor.c } : { r: 0, c };
-          setSel({ anchor, head: { r: rows - 1, c } });
-          drag.current = { mode: "cols" };
-        }}
-      >
-        {colName(c)}
-        <span
-          className="absolute right-[-3px] top-0 z-10 h-full w-[6px] cursor-col-resize"
+  // Column headers, in two strips: the frozen ones (fixed) and the rest (follow the scroll).
+  const frozenHeaders: ReactNode[] = [];
+  const colHeaders: ReactNode[] = [];
+  for (let c = 0; c <= bodyC1; c++) {
+    if (c >= frozenC && c < bodyC0) continue;
+    const ox = c < frozenC ? 0 : frozenW;
+    (c < frozenC ? frozenHeaders : colHeaders).push(
+        <div
+          key={c}
+          className={headCls(c >= g.c1 && c <= g.c2)}
+          style={{ left: colX[c] - ox, top: 0, width: widths[c], height: HEAD_H }}
           onMouseDown={(e) => {
-            e.stopPropagation();
             e.preventDefault();
-            drag.current = { mode: "resize", col: c, x: e.clientX, w: widths[c] };
+            if (edit) actions.commit(edit.text, [0, 0]);
+            rootRef.current?.focus();
+            const anchor = e.shiftKey ? { r: 0, c: sel.anchor.c } : { r: 0, c };
+            setSel({ anchor, head: { r: rows - 1, c } });
+            drag.current = { mode: "cols" };
           }}
-          onDoubleClick={() => actions.resizeCol(c, DEFAULT_COL)}
-        />
-      </div>,
+        >
+          {colName(c)}
+          <span
+            className="absolute right-[-3px] top-0 z-10 h-full w-[6px] cursor-col-resize"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              drag.current = { mode: "resize", col: c, x: e.clientX, w: widths[c] };
+            }}
+            onDoubleClick={() => actions.resizeCol(c, DEFAULT_COL)}
+          />
+        </div>,
     );
   }
 
-  const rowHeader = (r: number, top: number) => (
+
+  const rowHeader = (r: number, oy: number) => (
     <div
       key={r}
       className={headCls(r >= g.r1 && r <= g.r2)}
-      style={{ left: 0, top, width: HEAD_W, height: ROW_H }}
+      style={{ left: 0, top: rowY[r] - oy, width: HEAD_W, height: rowH(r) }}
       onMouseDown={(e) => {
         e.preventDefault();
         if (edit) actions.commit(edit.text, [0, 0]);
@@ -400,7 +445,9 @@ export function Grid({
   );
 
   const bodyRows = [];
-  for (let r = r0; r <= r1; r++) bodyRows.push(rowHeader(r, (r - frozen) * ROW_H));
+  for (let r = bodyR0; r <= bodyR1; r++) bodyRows.push(rowHeader(r, frozenH));
+  const fz = frozenC ? 2 : 0; // the frozen columns' divider
+  const fr = frozen ? 2 : 0;
 
   return (
     <div
@@ -439,49 +486,71 @@ export function Grid({
           setSel({ anchor: { r: 0, c: 0 }, head: { r: rows - 1, c: cols - 1 } });
         }}
       />
-      {/* Column headers */}
-      <div className="absolute top-0 z-20 overflow-hidden" style={{ left: HEAD_W, right: 0, height: HEAD_H }}>
-        <div className="relative h-full" style={{ transform: `translateX(${-scroll.l}px)`, width: colX[cols] }}>
+      {/* Column headers: the frozen ones stay put */}
+      {frozenC > 0 && (
+        <div className="absolute top-0 z-20 overflow-hidden border-r-2 border-[#9ca3af]" style={{ left: HEAD_W, width: frozenW + fz, height: HEAD_H }}>
+          <div className="relative h-full">{frozenHeaders}</div>
+        </div>
+      )}
+      <div className="absolute top-0 z-20 overflow-hidden" style={{ left: HEAD_W + frozenW + fz, right: 0, height: HEAD_H }}>
+        <div className="relative h-full" style={{ transform: `translateX(${-scroll.l}px)`, width: colX[cols] - frozenW }}>
           {colHeaders}
         </div>
       </div>
-      {/* Frozen rows */}
+      {/* Frozen rows: headers, the corner pane, and the band that scrolls sideways */}
       {frozen > 0 && (
         <>
           <div className="absolute left-0 z-20 overflow-hidden" style={{ top: HEAD_H, width: HEAD_W, height: frozenH }}>
-            {Array.from({ length: frozen }, (_, r) => rowHeader(r, r * ROW_H))}
+            {Array.from({ length: frozen }, (_, r) => rowHeader(r, 0))}
           </div>
+          {frozenC > 0 && (
+            <div data-cells className="absolute z-20 overflow-hidden border-b-2 border-r-2 border-[#9ca3af]" style={{ top: HEAD_H, left: HEAD_W, width: frozenW + fz, height: frozenH + fr }} onMouseDown={onCellDown}>
+              <div className="relative h-full">
+                {cellsIn(panes.corner)}
+                {overlay(panes.corner)}
+              </div>
+            </div>
+          )}
           <div
             data-cells
             className="absolute z-10 overflow-hidden border-b-2 border-[#9ca3af]"
-            style={{ top: HEAD_H, left: HEAD_W, right: 0, height: frozenH + 2 }}
+            style={{ top: HEAD_H, left: HEAD_W + frozenW + fz, right: 0, height: frozenH + fr }}
             onMouseDown={onCellDown}
           >
-            <div className="relative h-full" style={{ transform: `translateX(${-scroll.l}px)`, width: colX[cols] }}>
-              {cellsIn(0, frozen - 1, (r) => r * ROW_H)}
-              {overlay(0, frozen - 1, (r) => r * ROW_H)}
+            <div className="relative h-full" style={{ transform: `translateX(${-scroll.l}px)`, width: colX[cols] - frozenW }}>
+              {cellsIn(panes.top)}
+              {overlay(panes.top)}
             </div>
           </div>
         </>
       )}
       {/* Row headers */}
-      <div className="absolute left-0 z-20 overflow-hidden" style={{ top: HEAD_H + frozenH, width: HEAD_W, bottom: 0 }}>
+      <div className="absolute left-0 z-20 overflow-hidden" style={{ top: HEAD_H + frozenH + fr, width: HEAD_W, bottom: 0 }}>
         <div className="relative" style={{ transform: `translateY(${-scroll.t}px)` }}>
           {bodyRows}
         </div>
       </div>
+      {/* Frozen columns: scroll up and down with the body */}
+      {frozenC > 0 && (
+        <div data-cells className="absolute z-10 overflow-hidden border-r-2 border-[#9ca3af]" style={{ top: HEAD_H + frozenH + fr, left: HEAD_W, width: frozenW + fz, bottom: 0 }} onMouseDown={onCellDown}>
+          <div className="relative" style={{ transform: `translateY(${-scroll.t}px)`, height: rowY[rows] - frozenH }}>
+            {cellsIn(panes.left)}
+            {overlay(panes.left)}
+          </div>
+        </div>
+      )}
       {/* Body */}
       <div
         ref={scroller}
         data-cells
         className="absolute overflow-auto"
-        style={{ top: HEAD_H + frozenH + (frozen ? 2 : 0), left: HEAD_W, right: 0, bottom: 0 }}
+        style={{ top: HEAD_H + frozenH + fr, left: HEAD_W + frozenW + fz, right: 0, bottom: 0 }}
         onScroll={(e) => setScroll({ l: e.currentTarget.scrollLeft, t: e.currentTarget.scrollTop })}
         onMouseDown={onCellDown}
       >
-        <div className="relative" style={{ width: colX[cols], height: (rows - frozen) * ROW_H }}>
-          {cellsIn(r0, r1, (r) => (r - frozen) * ROW_H)}
-          {overlay(frozen, rows - 1, (r) => (r - frozen) * ROW_H)}
+        <div className="relative" style={{ width: colX[cols] - frozenW, height: rowY[rows] - frozenH }}>
+          {cellsIn(panes.body)}
+          {overlay(panes.body)}
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { format as ssfFormat } from "ssf";
 import type { CellStyle } from "../types";
 
 /** A computed cell value: what HyperFormula returns, with errors flattened to plain objects. */
@@ -55,4 +56,16 @@ export function plainValue(v: Value): string {
   if (isError(v)) return v.error;
   if (typeof v === "boolean") return v ? "TRUE" : "FALSE";
   return String(v);
+}
+
+/** A cell's display text: its exact Excel number format when it has one, otherwise the simple ones. */
+export function formatCell(v: Value, s: CellStyle | undefined): string {
+  if (s?.numFmt && typeof v === "number" && Number.isFinite(v)) {
+    try {
+      return ssfFormat(s.numFmt, v);
+    } catch {
+      // An unusual code SSF doesn't know: fall back to the simple formats.
+    }
+  }
+  return formatValue(v, s?.fmt);
 }
