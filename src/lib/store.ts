@@ -114,15 +114,14 @@ const bufferedFetch: typeof fetch = async (input, init) => {
 let kv: Promise<KV> | null = null;
 
 export function store(): Promise<KV> {
-  kv ??= (async () => {
-    // Netlify sets NETLIFY_BLOBS_CONTEXT (or NETLIFY) inside its functions; anywhere else, use disk.
-    if (process.env.ATRIUM_STORAGE !== "fs" && (process.env.NETLIFY_BLOBS_CONTEXT || process.env.NETLIFY)) {
-      const { getStore } = await import("@netlify/blobs");
-      return new NetlifyKV(getStore({ name: "atrium", consistency: "strong", fetch: bufferedFetch }));
-    }
-    // A runtime folder, not part of the build: keep the file tracer from bundling the whole project.
-    return new FileKV(path.resolve(/*turbopackIgnore: true*/ process.env.ATRIUM_DATA_DIR || ".data"));
-  })();
+  // Netlify sets NETLIFY_BLOBS_CONTEXT (or NETLIFY) inside its functions; anywhere else, use disk.
+  if (process.env.ATRIUM_STORAGE !== "fs" && (process.env.NETLIFY_BLOBS_CONTEXT || process.env.NETLIFY)) {
+    // Not cached: each invocation brings its own short-lived Blobs token, and a warm function that
+    // kept the first one fails every call with "Token expired" once it lapses. getStore is cheap.
+    return import("@netlify/blobs").then(({ getStore }) => new NetlifyKV(getStore({ name: "atrium", consistency: "strong", fetch: bufferedFetch })));
+  }
+  // A runtime folder, not part of the build: keep the file tracer from bundling the whole project.
+  kv ??= Promise.resolve(new FileKV(path.resolve(/*turbopackIgnore: true*/ process.env.ATRIUM_DATA_DIR || ".data")));
   return kv;
 }
 
