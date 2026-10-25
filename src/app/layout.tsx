@@ -20,7 +20,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {/* Netlify injects a "Powered by Netlify" badge: remove it, and again if it is re-injected. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(()=>{const k=()=>document.querySelectorAll('#nl-badge-frame,#nl-badge,[id^="nl-badge"]').forEach(e=>e.remove());k();new MutationObserver(k).observe(document.documentElement,{childList:true,subtree:true})})()`,
+          }}
+        />
+      </body>
     </html>
   );
 }

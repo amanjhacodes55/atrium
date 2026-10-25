@@ -475,3 +475,6 @@ body {
     break-after: page;
   }
 }
+
+/* Netlify's injected badge (also removed by a script in the layout). */
+#nl-badge-frame, [id^="nl-badge"] { display: none !important; }
