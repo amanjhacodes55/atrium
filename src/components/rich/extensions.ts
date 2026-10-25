@@ -11,10 +11,12 @@ import Placeholder from "@tiptap/extension-placeholder";
 
 // One extension list for the Docs and Notebook editors, the read-only viewers and Word import, so
 // every path understands exactly the same document schema.
-export function richExtensions(opts: { placeholder?: string; editable?: boolean } = {}): Extensions {
+// With `live`, undo comes from the collaboration extension instead (it only undoes your own edits).
+export function richExtensions(opts: { placeholder?: string; editable?: boolean; live?: boolean } = {}): Extensions {
   return [
     StarterKit.configure({
       heading: { levels: [1, 2, 3] },
+      ...(opts.live ? { undoRedo: false as const } : {}),
       link: {
         openOnClick: !opts.editable,
         autolink: true,

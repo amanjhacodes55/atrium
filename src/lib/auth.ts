@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import { COOKIE } from "./auth-cookie";
 import { deleteAllFor } from "./drive";
 import { randomId } from "./ids";
+import { deleteSharedFor } from "./shared";
 import { getJSON, setJSON, store } from "./store";
 import type { PublicUser } from "./types";
 
@@ -169,6 +170,7 @@ export async function deleteAccount(id: string) {
   const user = await getJSON<UserRecord>(userKey(id));
   if (!user) return;
   await deleteAllFor(id);
+  await deleteSharedFor(id);
   const kv = await store();
   await kv.delete(emailKey(user.email));
   await kv.delete(userKey(id));

@@ -1,21 +1,23 @@
 "use client";
 
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronRight, Clock, FolderPlus, HardDrive, LayoutGrid, List, Plus, Search, Share2, Star, Trash2, Upload } from "lucide-react";
-import { APPS, AppTile } from "@/components/app-icon";
+import { ChevronRight, Clock, FolderPlus, HardDrive, LayoutGrid, List, Plus, Search, Share2, Star, Trash2, Upload, Users, X } from "lucide-react";
+import { APPS, AppTile, ItemIcon } from "@/components/app-icon";
 import { FileList, useItems } from "@/components/files";
 import { TopBar, useSession } from "@/components/shell";
 import { Dropdown, PromptDialog, Spinner, useToast } from "@/components/ui";
-import { drive, formatBytes } from "@/lib/client";
+import { drive, formatBytes, formatWhen } from "@/lib/client";
+import type { SharedEntry } from "@/lib/shared";
 import { EDITOR_PATH, type EditableKind, type Item } from "@/lib/types";
 
 const VIEWS = [
   { id: "my", label: "My Drive", Icon: HardDrive },
   { id: "recent", label: "Recent", Icon: Clock },
   { id: "starred", label: "Starred", Icon: Star },
-  { id: "shared", label: "Shared by link", Icon: Share2 },
+  { id: "with-me", label: "Shared with me", Icon: Users },
+  { id: "shared", label: "Shared by me", Icon: Share2 },
   { id: "trash", label: "Trash", Icon: Trash2 },
 ] as const;
 type View = (typeof VIEWS)[number]["id"];
@@ -244,7 +246,9 @@ function DriveView() {
             </div>
           </div>
           {view === "trash" && <p className="mb-3 px-2 text-xs text-muted">Items in the trash stay until you delete them or empty the trash.</p>}
-          {error ? (
+          {view === "with-me" && !query ? (
+            <SharedWithMe />
+          ) : error ? (
             <p className="p-6 text-sm text-danger">{error}</p>
           ) : !items ? (
             <Spinner />
@@ -284,6 +288,57 @@ function DriveView() {
           onClose={() => setNewFolder(false)}
         />
       )}
+    </div>
+  );
+}
+
+/** Links other people shared that you have opened while signed in. */
+function SharedWithMe() {
+  const [list, setList] = useState<SharedEntry[] | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    drive
+      .shared()
+      .then(setList)
+      .catch((e) => setError(e.message));
+  }, []);
+  if (error) return <p className="p-6 text-sm text-danger">{error}</p>;
+  if (!list) return <Spinner />;
+  if (!list.length)
+    return (
+      <div className="flex flex-col items-center gap-2 p-16 text-center">
+        <Users size={40} className="text-muted" />
+        <p className="font-medium">Nothing shared with you yet</p>
+        <p className="max-w-sm text-sm text-muted">When someone sends you an Atrium link and you open it while signed in, it shows up here.</p>
+      </div>
+    );
+  return (
+    <div className="card divide-y divide-line overflow-hidden">
+      {list.map((e) => (
+        <div key={e.shareId} className="flex items-center gap-3 px-4 py-2.5 hover:bg-hover">
+          {e.kind === "folder" || e.kind === "file" ? <ItemIcon item={{ kind: e.kind }} size={22} /> : <AppTile kind={e.kind} size={22} />}
+          <Link href={`/s/${e.shareId}`} className="min-w-0 flex-1 truncate text-sm font-medium hover:underline">
+            {e.name}
+          </Link>
+          <span className="text-xs text-muted max-sm:hidden">{e.owner}</span>
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${e.role === "edit" ? "bg-accent-wash text-accent" : "bg-surface-2 text-ink-2"}`}>
+            {e.role === "edit" ? "Can edit" : "Can view"}
+          </span>
+          <span className="w-24 text-right text-xs text-muted max-sm:hidden">{formatWhen(e.openedAt)}</span>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={`Remove ${e.name} from this list`}
+            title="Remove from this list"
+            onClick={async () => {
+              await drive.forgetShared(e.shareId);
+              setList((l) => l?.filter((x) => x.shareId !== e.shareId) ?? null);
+            }}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

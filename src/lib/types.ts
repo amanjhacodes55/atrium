@@ -19,9 +19,13 @@ export type Item = {
   trashedAt: number | null;
   createdAt: number;
   updatedAt: number;
-  /** Set while a public read-only link is on. */
+  /** Set while a public link is on. */
   shareId: string | null;
+  /** What people with the link can do. Absent on older items, which means "view". */
+  shareRole?: ShareRole;
 };
+
+export type ShareRole = "view" | "edit";
 
 export type PublicUser = { id: string; email: string; name: string; guest: boolean; createdAt: number };
 

@@ -1,7 +1,8 @@
 import { blankBody, DEFAULT_NAME } from "./blank";
 import { randomId } from "./ids";
+import { liveDelete } from "./live";
 import { getJSON, setJSON, store } from "./store";
-import type { Body, EditableKind, Item, Kind, Usage } from "./types";
+import type { Body, EditableKind, Item, Kind, ShareRole, Usage } from "./types";
 
 // Each user's drive is one index value (`drive/<userId>`) listing every item's metadata, so a
 // folder view is a single read. Bodies live apart: `content/<itemId>` (JSON for Atrium files, raw
@@ -196,7 +197,11 @@ export async function deleteForever(userId: string, ids: string[]): Promise<numb
   });
   const kv = await store();
   await Promise.all(
-    removed.flatMap((item) => [kv.delete(contentKey(item.id)), item.shareId ? kv.delete(shareKey(item.shareId)) : Promise.resolve()]),
+    removed.flatMap((item) => [
+      kv.delete(contentKey(item.id)),
+      item.shareId ? kv.delete(shareKey(item.shareId)) : Promise.resolve(),
+      item.kind === "doc" ? liveDelete(item.id) : Promise.resolve(),
+    ]),
   );
   return removed.length;
 }
@@ -251,17 +256,25 @@ export async function duplicate(userId: string, id: string): Promise<Item> {
   return createItem(userId, { kind: item.kind, name, parentId: item.parentId, body });
 }
 
-export async function setSharing(userId: string, id: string, on: boolean): Promise<Item> {
+/** Live co-editing through a link is a Docs feature; the other editors share read-only. */
+export const LINK_EDITABLE: Kind[] = ["doc"];
+
+export async function setSharing(userId: string, id: string, on: boolean, role: ShareRole = "view"): Promise<Item> {
   const item = await getItem(userId, id);
   if (item.kind === "folder") throw new DriveError("Share files one at a time.");
-  if (on === Boolean(item.shareId)) return item;
-  const shareId = on ? randomId(16) : null;
-  if (shareId) await setJSON(shareKey(shareId), { ownerId: userId, itemId: id } satisfies ShareRef);
-  else await (await store()).delete(shareKey(item.shareId!));
+  if (role === "edit" && !LINK_EDITABLE.includes(item.kind)) throw new DriveError("Links to this kind of file are view only.");
+  if (on && item.shareId && (item.shareRole ?? "view") === role) return item;
+  if (!on && !item.shareId) return item;
+  // Changing the role keeps the same link, so a link already sent starts allowing (or stops allowing) edits.
+  const shareId = on ? (item.shareId ?? randomId(16)) : null;
+  if (shareId && !item.shareId) await setJSON(shareKey(shareId), { ownerId: userId, itemId: id } satisfies ShareRef);
+  if (!shareId) await (await store()).delete(shareKey(item.shareId!));
   return editIndex(userId, (index) => {
     const current = index.items[id];
     if (!current) throw new DriveError("File not found.", 404);
     current.shareId = shareId;
+    if (shareId) current.shareRole = role;
+    else delete current.shareRole;
     return { ...current };
   });
 }

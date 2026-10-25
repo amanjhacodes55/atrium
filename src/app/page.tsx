@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { ArrowRight, Cloud, FileStack, Lock, Moon, Share2, Sparkles } from "lucide-react";
+import { ArrowRight, Cloud, FileStack, Lock, Share2, Sparkles, Users } from "lucide-react";
 import { APPS, AppTile, GithubMark, Logo } from "@/components/app-icon";
 import { GuestButton } from "@/components/auth-form";
 import { COOKIE } from "@/lib/auth-cookie";
@@ -8,19 +8,19 @@ import { COOKIE } from "@/lib/auth-cookie";
 const REPO = "https://github.com/amanjhacodes55/atrium";
 
 const DETAILS: Record<string, string[]> = {
-  doc: ["Headings, fonts, colours, tables, images, checklists", "Open and save Word (.docx), export PDF, HTML, Markdown", "A4 and Letter pages with live word count"],
+  doc: ["Write together live, with everyone's cursor on the page", "Real A4 and Letter pages, split line by line like Word", "Open and save Word (.docx), export PDF, HTML, Markdown"],
   sheet: ["400+ Excel-compatible formulas, cross-sheet references", "Open and save Excel (.xlsx) and CSV", "Formats, colours, sorting, frozen rows, multiple tabs"],
   slides: ["Text, shapes, images, themes, speaker notes", "Save as PowerPoint (.pptx) or PDF", "Full-screen presenter with keyboard control"],
-  drive: ["Folders, drag-and-drop uploads, previews", "Star, search, move, trash and restore", "Public read-only links for any file"],
+  drive: ["Folders, drag-and-drop uploads, previews", "Star, search, move, trash and restore", "Public links for any file, and a Shared with me list"],
   notebook: ["Notebooks with coloured sections and pages", "Checklists, rich text and images on every page", "Search across pages, autosaves as you type"],
 };
 
 const FEATURES = [
   { Icon: FileStack, title: "Works with Office files", text: "Open .docx, .xlsx, .csv and .pptx files, edit them, and download them back in the same format." },
   { Icon: Cloud, title: "Autosave everywhere", text: "Every keystroke is saved within a second. Close the tab whenever you like." },
-  { Icon: Share2, title: "Share with a link", text: "Turn on a read-only link for any document, sheet, deck, notebook or file, and turn it off again." },
+  { Icon: Users, title: "Edit together, live", text: "Share a document with an edit link and write in it together, like Google Docs: live cursors, names and edits, no account needed." },
+  { Icon: Share2, title: "Share with a link", text: "A public link for any document, sheet, deck, notebook or file, as viewer or editor. Turn it off any time." },
   { Icon: Lock, title: "Your server, your data", text: "Self-host it with Docker or one click on Netlify. No tracking, no ads, no third parties." },
-  { Icon: Moon, title: "Light and dark", text: "A calm interface that follows your system theme, with the page always paper-white." },
   { Icon: Sparkles, title: "Free and open source", text: "AGPL-3.0 licensed. Use it, change it, run it for your team. Improvements stay open for everyone." },
 ];
 

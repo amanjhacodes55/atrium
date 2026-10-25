@@ -18,7 +18,7 @@ Like Microsoft 365 or Zoho Workplace, without the subscription. It opens and sav
 
 </div>
 
-[![Atrium demo video: the home launcher](docs/screenshots/home.png)](docs/media/atrium-demo.mp4)
+[![Atrium demo video: two people editing a document live](docs/screenshots/docs.png)](docs/media/atrium-demo.mp4)
 
 Office software is something everyone needs and few people want to rent. Atrium puts the five everyday tools in one
 workspace with one login and one drive, runs on a free Netlify site or any server, and is licensed under the AGPL so it
@@ -29,10 +29,13 @@ workspace with sample files in every app.
 
 ## The apps
 
-**📝 Docs**: a word processor
+**📝 Docs**: a word processor you can write in together
+- **Real-time co-editing, like Google Docs.** Share an edit link and everyone types in the same document at once,
+  with each person's cursor and name on the page and avatars of who is here. No account needed to join.
+- **Real pages.** A4 or Letter sheets with margins and page numbers. Text flows from page to page line by line, lists
+  split between items, and printing breaks exactly where the screen does.
 - Headings, fonts, sizes, colours, highlights, alignment, lists, checklists, quotes, code, links, images and tables
-  with resizable columns.
-- A4 or Letter pages with adjustable margins, and a live word count.
+  with resizable columns. Page and word count.
 - Opens Word files (.docx). Downloads as Word, PDF, HTML or Markdown.
 
 **📊 Sheets**: a spreadsheet
@@ -52,6 +55,7 @@ workspace with sample files in every app.
 **🗂️ Drive**: file storage
 - Folders, drag-and-drop uploads, and previews for images, video, audio, PDF and text.
 - Search, star, rename, move (by dragging too), copy, trash and restore. Shows how much storage you have used.
+- *Shared by me* and *Shared with me* views.
 - Upload a .docx, .xlsx, .csv or .pptx file and open it in Atrium.
 
 **📓 Notebook**: notes like OneNote
@@ -60,7 +64,8 @@ workspace with sample files in every app.
 
 **Across the suite**
 - **Autosave**: every change is saved within a second, and the save is retried if you go offline.
-- **Share by link**: a public, read-only link for any file, which you can turn off at any time.
+- **Share by link**: a public link for any file, as *Viewer* or (for documents) *Editor*, which you can turn off at
+  any time. Viewers watch edits land live. Links you open while signed in collect under **Shared with me**.
 - **Templates**: meeting notes, a resume, a project proposal, a budget, an invoice, a pitch deck, a journal and more.
 - **Guest workspaces**: anyone can try the app without signing up, and keep their files by signing up later.
 - **Light and dark themes**, with an app launcher like Microsoft 365's.
@@ -69,16 +74,20 @@ workspace with sample files in every app.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/docs.png" alt="Docs editor with a launch plan document" /><br /><sub><b>Docs</b>: a word processor that reads and writes .docx</sub></td>
-    <td width="50%"><img src="docs/screenshots/sheets.png" alt="Sheets with a budget and formulas" /><br /><sub><b>Sheets</b>: Excel formulas, formats and tabs</sub></td>
+    <td width="50%"><img src="docs/screenshots/docs.png" alt="Docs editor with two people editing the team handbook" /><br /><sub><b>Docs</b>: write together live, with each person's cursor and name</sub></td>
+    <td width="50%"><img src="docs/screenshots/pages.png" alt="A document split across two pages" /><br /><sub><b>Real pages</b>: text flows from page to page, headings stay with their paragraph</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/shared-link.png" alt="The same document opened from an edit link" /><br /><sub><b>Edit links</b>: anyone with the link joins without an account</sub></td>
+    <td><img src="docs/screenshots/sheets.png" alt="Sheets with a budget and formulas" /><br /><sub><b>Sheets</b>: Excel formulas, formats and tabs</sub></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/slides.png" alt="Slides editor with a pitch deck" /><br /><sub><b>Slides</b>: build a deck, then present it full screen</sub></td>
-    <td><img src="docs/screenshots/drive.png" alt="Drive with folders and files" /><br /><sub><b>Drive</b>: folders, uploads, previews and sharing</sub></td>
+    <td><img src="docs/screenshots/drive.png" alt="Drive with folders and files" /><br /><sub><b>Drive</b>: folders, uploads, previews, Shared with me</sub></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/notebook.png" alt="Notebook with sections and pages" /><br /><sub><b>Notebook</b>: sections, pages and checklists</sub></td>
-    <td><img src="docs/screenshots/dark.png" alt="Atrium in dark mode" /><br /><sub><b>Dark mode</b> throughout</sub></td>
+    <td><img src="docs/screenshots/dark.png" alt="Atrium Drive in dark mode" /><br /><sub><b>Dark mode</b> throughout</sub></td>
   </tr>
 </table>
 
@@ -143,6 +152,7 @@ See the [API reference](docs/api.md) for every endpoint.
 | --------------- | ------------------------------------------------------------------------------------------------------ |
 | App             | [Next.js 16](https://nextjs.org) (App Router), React 19, TypeScript, Tailwind CSS 4                    |
 | Docs, Notebook  | [TipTap](https://tiptap.dev) (ProseMirror); [mammoth](https://github.com/mwilliamson/mammoth.js) and [docx](https://docx.js.org) for Word |
+| Live editing    | [Yjs](https://yjs.dev) CRDT relayed over HTTP polling, so it runs on serverless functions with no socket server |
 | Sheets          | [HyperFormula](https://hyperformula.handsontable.com/) for formulas; [ExcelJS](https://github.com/exceljs/exceljs) for .xlsx |
 | Slides          | A custom canvas editor; [PptxGenJS](https://gitbrent.github.io/PptxGenJS/) and JSZip for .pptx         |
 | Storage         | Netlify Blobs on Netlify, plain files everywhere else                                                  |
@@ -157,7 +167,7 @@ so it runs comfortably on free serverless functions. More in [architecture](docs
 npm run dev         # start on http://localhost:3000
 npm run lint        # ESLint
 npm run typecheck   # TypeScript
-npm test            # Vitest: drive, auth, formulas, Word, Excel and PowerPoint conversion
+npm test            # Vitest: drive, auth, live editing, formulas, Word, Excel and PowerPoint conversion
 npm run build       # production build
 ```
 
@@ -166,7 +176,8 @@ The demo video is recorded from the running app with Playwright and narrated wit
 
 ## Roadmap
 
-Real-time co-editing, comments, version history, folder sharing, mail and calendar. Ideas and pull requests are welcome.
+Comments and suggestions in Docs, version history, live co-editing in Sheets and Slides, folder sharing, mail and
+calendar. Ideas and pull requests are welcome.
 
 ## Licence
 

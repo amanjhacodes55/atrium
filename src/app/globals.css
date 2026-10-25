@@ -404,3 +404,74 @@ body {
     background: #fff !important;
   }
 }
+
+/* ---- Paged documents (src/components/docs/paged.tsx) ---- */
+
+.page-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--paper);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 6px 24px rgba(0, 0, 0, 0.07);
+}
+.page-number {
+  position: absolute;
+  bottom: calc(var(--page-bottom) / 2 - 0.6em);
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: #9ca3af;
+  user-select: none;
+}
+.page-flow {
+  cursor: text;
+}
+.prose-atrium > .page-gap,
+.prose-atrium .page-split {
+  display: block;
+  margin: 0 !important;
+  pointer-events: none;
+}
+/* Other people's carets (Tiptap's collaboration caret). */
+.collaboration-carets__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 2px solid;
+  border-right: 0;
+  word-break: normal;
+  pointer-events: none;
+}
+.collaboration-carets__label {
+  position: absolute;
+  top: -1.45em;
+  left: -2px;
+  padding: 1px 6px;
+  border-radius: 4px 4px 4px 0;
+  color: #fff;
+  font: 600 11px/1.4 var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-style: normal;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+
+@media print {
+  .paged {
+    width: auto !important;
+  }
+  .page-sheets {
+    display: none;
+  }
+  .page-flow {
+    padding: 0 !important;
+    min-height: 0 !important;
+  }
+  /* The printer pages by @page margins; each spacer becomes a hard page break at the same place. */
+  .prose-atrium > .page-gap,
+  .prose-atrium .page-split {
+    height: 0 !important;
+    break-after: page;
+  }
+}

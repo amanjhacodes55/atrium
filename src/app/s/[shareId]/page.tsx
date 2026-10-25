@@ -5,16 +5,16 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowDownToLine } from "lucide-react";
 import { AppTile, ItemIcon, Logo } from "@/components/app-icon";
-import { DocViewer } from "@/components/docs/doc-viewer";
+import { SharedDoc, type ShareViewer } from "@/components/docs/shared-doc";
 import { NotebookViewer } from "@/components/notebook/notebook-viewer";
 import { ThemeToggle } from "@/components/shell";
 import { SheetViewer } from "@/components/sheets/sheet-viewer";
 import { SlidesViewer } from "@/components/slides/slides-viewer";
 import { Spinner, ToastProvider } from "@/components/ui";
 import { formatBytes, formatWhen } from "@/lib/client";
-import type { Body, Item } from "@/lib/types";
+import type { Body, Item, ShareRole } from "@/lib/types";
 
-type Shared = { item: Pick<Item, "id" | "kind" | "name" | "mime" | "size" | "updatedAt">; body?: Body };
+type Shared = { item: Pick<Item, "id" | "kind" | "name" | "mime" | "size" | "updatedAt">; body?: Body; role: ShareRole; owner: string; me: ShareViewer };
 
 function FileView({ item, src }: { item: Shared["item"]; src: string }) {
   const mime = item.mime ?? "";
@@ -62,6 +62,14 @@ export default function SharedPage() {
   }, [shareId]);
 
   const kind = data?.item.kind;
+  if (data?.body?.type === "doc") {
+    // Documents open live: everyone on the link sees edits land, and edit links can type too.
+    return (
+      <ToastProvider>
+        <SharedDoc shareId={shareId} item={data.item} body={data.body} role={data.role} owner={data.owner} me={data.me} />
+      </ToastProvider>
+    );
+  }
   return (
     <ToastProvider>
       <div className="flex min-h-screen flex-col">
@@ -69,7 +77,7 @@ export default function SharedPage() {
           {kind && kind !== "file" && kind !== "folder" ? <AppTile kind={kind} size={30} /> : <Logo size={28} />}
           <div className="min-w-0 flex-1">
             <div className="truncate text-[15px] font-medium">{data?.item.name ?? "Shared file"}</div>
-            {data && <div className="text-xs text-muted">View only · updated {formatWhen(data.item.updatedAt)}</div>}
+            {data && <div className="text-xs text-muted">View only · shared by {data.owner} · updated {formatWhen(data.item.updatedAt)}</div>}
           </div>
           <ThemeToggle />
           <Link href="/" className="btn btn-sm">
@@ -83,8 +91,6 @@ export default function SharedPage() {
           </div>
         ) : !data ? (
           <Spinner />
-        ) : data.body?.type === "doc" ? (
-          <DocViewer body={data.body} />
         ) : data.body?.type === "sheet" ? (
           <SheetViewer body={data.body} />
         ) : data.body?.type === "slides" ? (

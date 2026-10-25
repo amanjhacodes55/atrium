@@ -38,6 +38,56 @@ const launchPlan = doc(
   { type: "blockquote", content: [p("Ship small, ship often, and tell people what changed.")] },
 );
 
+// Long enough to run over several pages, so the page layout shows on first open.
+const handbook = doc(
+  h(1, "Team Handbook"),
+  p(text("How we work, ", "italic"), text("written down so nobody has to guess.", "italic"), " Edit it together: share it with an edit link and everyone's changes appear as they type."),
+  h(2, "1. Who we are"),
+  p("We are a small team building tools that people use every day. We care about software that is fast, calm and honest about what it does. We would rather ship one thing that works well than five that almost work."),
+  p("Most of us work remotely across three time zones. That shapes almost everything below: we write things down, we make decisions in the open, and we try hard not to make anyone wait on a meeting to get unblocked."),
+  h(2, "2. How we communicate"),
+  p("Default to writing. A short written proposal beats a long call, because people can read it when they are at their best and reply with thought instead of reflex. When a call is the right tool, someone takes notes in a shared document and links it in the team channel afterwards."),
+  ul(
+    "Urgent and blocking: message the person directly, and say that it is urgent.",
+    "Needs a decision: write a one-page proposal and share it with an edit link.",
+    "Status and progress: a weekly update in the team notebook, every Friday.",
+    "Everything else: the team channel, where anyone can find it later.",
+  ),
+  p("Reply within a working day. If you need more time, say so and say when. Silence is the only wrong answer."),
+  h(2, "3. Working hours"),
+  p("We have four core hours, 14:00 to 18:00 UTC, when everyone is around for questions and pairing. Outside those hours, work when you do your best work. Nobody is expected to answer messages in the evening or at weekends, and nobody should send a message that needs one."),
+  p("Put holidays in the team calendar at least two weeks ahead when you can. Take all of your holiday: we track that you do, not that you don't."),
+  h(2, "4. Making decisions"),
+  p("Most decisions are reversible, so make them quickly and write down why. For the few that are hard to undo (pricing, data formats, anything that touches customer files), write a proposal with the options you considered and leave it open for comments for two working days."),
+  table([
+    ["Kind of decision", "Who decides", "How long to wait"],
+    ["Day-to-day work", "Whoever is doing it", "No wait"],
+    ["Changes other teams depend on", "The owning team", "One working day"],
+    ["Hard to undo", "The whole team", "Two working days"],
+  ]),
+  p("Disagree openly, then commit. Once a decision is made, we all help it succeed, and we revisit it with new evidence rather than old arguments."),
+  h(2, "5. Shipping"),
+  p("Small changes, shipped often, reviewed by one other person. Every change should leave the code a little clearer than it was. If you find yourself writing a long explanation in a review, that explanation probably belongs in the code or the docs."),
+  ul(
+    "Write the test that fails before the fix that passes.",
+    "Keep pull requests small enough to review in fifteen minutes.",
+    "Ship behind a setting when the change is large or risky.",
+    "Tell people what changed, in plain words, in the release notes.",
+  ),
+  { type: "blockquote", content: [p("The best time to fix a confusing name is the moment you notice it.")] },
+  h(2, "6. Onboarding checklist"),
+  tasks(
+    ["Get accounts for email, chat and the code host", true],
+    ["Read this handbook and leave at least one comment", true],
+    ["Pair with a teammate on a small change in your first week", false],
+    ["Ship something to customers in your first two weeks", false],
+    ["Write down one thing that confused you, and fix the docs", false],
+  ),
+  h(2, "7. Looking after each other"),
+  p("Be kind, be direct, and assume good intent. Feedback is a gift when it is specific, timely and private. Praise is a gift when it is specific and public."),
+  p("If something is wrong, say so early. If you are struggling, tell your lead or anyone you trust. We would always rather know."),
+);
+
 const budget: SheetTab = {
   name: "Budget",
   cells: {
@@ -171,6 +221,7 @@ export async function seedSamples(userId: string) {
   const finance = await createItem(userId, { kind: "folder", name: "Finance" });
   await createItem(userId, { kind: "folder", name: "Marketing" });
   await createItem(userId, { kind: "doc", name: "Q4 Product Launch Plan", parentId: projects.id, body: { type: "doc", content: launchPlan, page: { size: "a4", margins: "normal" } } });
+  await createItem(userId, { kind: "doc", name: "Team Handbook", body: { type: "doc", content: handbook, page: { size: "a4", margins: "normal" } } });
   await createItem(userId, { kind: "sheet", name: "Budget 2026", parentId: finance.id, body: { type: "sheet", sheets: [budget, sales] } });
   await createItem(userId, { kind: "slides", name: "Atrium Pitch Deck", parentId: projects.id, body: { type: "slides", theme: "light", slides: pitchSlides } });
   await createItem(userId, { kind: "notebook", name: "Team Notebook", body: notebook });

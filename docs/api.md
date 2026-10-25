@@ -163,16 +163,49 @@ download with `Content-Type: application/octet-stream`, so an uploaded file can 
 
 ### Turn a link on or off
 
-`POST /api/items/:id/share` with `{ "on": true }` → `200 { "item": Item }`. `item.shareId` is the public link id, and
-the link is `https://<origin>/s/<shareId>`. `{ "on": false }` deletes the link; turning it on again makes a new one.
+`POST /api/items/:id/share` with `{ "on": true, "role": "view" | "edit" }` → `200 { "item": Item }`. `item.shareId` is
+the public link id, and the link is `https://<origin>/s/<shareId>`. `role` defaults to `"view"`; `"edit"` is accepted for
+documents only and lets anyone with the link edit live. Changing the role keeps the same link. `{ "on": false }`
+deletes the link; turning it on again makes a new one.
 
 ### Read a shared item (no auth)
 
-`GET /api/share/:shareId` → `200 { "item": { id, kind, name, mime, size, updatedAt }, "body"?: Body }`.
-`body` is present for documents, spreadsheets, presentations and notebooks. A link stops working when it is turned off
-or when the item is trashed.
+`GET /api/share/:shareId` →
+`200 { "item": { id, kind, name, mime, size, updatedAt }, "role": "view" | "edit", "owner": string, "me": {…} | null, "body"?: Body }`.
+`body` is present for documents, spreadsheets, presentations and notebooks. `owner` is the owner's display name, and
+`me` describes the visitor when they are signed in (who then also get the link under *Shared with me*). A link stops
+working when it is turned off or when the item is trashed.
 
 `GET /api/share/:shareId/file` downloads a shared upload, with the same inline rules as above.
+
+`PUT /api/share/:shareId/body` with a `doc` body saves a document edited through an edit link (`403` on a view link).
+
+### Shared with me (auth)
+
+`GET /api/shared` → `200 { "shared": [{ shareId, name, kind, role, owner, openedAt }] }`, newest first: links the
+signed-in user has opened. `DELETE /api/shared` with `{ "shareId": "…" }` removes one from the list.
+
+## Live editing
+
+Documents are edited live through a small polling protocol over [Yjs](https://yjs.dev) updates, so it works on
+serverless hosting with no socket server. The owner uses `POST /api/items/:id/live`; people on a link use
+`POST /api/share/:shareId/live` (view links can poll but their updates are ignored).
+
+```json
+{ "since": 12, "epoch": "k3j…", "client": 4102, "update": "<base64 Yjs update>", "awareness": "<base64>" }
+```
+
+→ `200 { "epoch": "k3j…", "seq": 14, "updates": ["<base64>", …], "peers": [{ "client": 77, "state": "<base64>" }] }`
+
+- `since` is the last `seq` the client applied; `updates` holds everything after it (or the whole history if the client
+  is further back than the last compaction). Updates are idempotent, so applying one twice is harmless.
+- `seed: true` with an `update` only stores it if the document has no live history yet (the first person to open it).
+- `awareness` is the client's Yjs awareness state (cursor, name, colour), `null` when leaving. Peers that have not
+  announced themselves for 25 seconds are dropped.
+- If `epoch` differs from the client's, the document was replaced (a Word import): discard the local copy and reload.
+  `PUT /api/items/:id/live` with `{ "update": "<base64>" }` does that replacement.
+
+The client is [`src/lib/live-client.ts`](../src/lib/live-client.ts) and the server [`src/lib/live.ts`](../src/lib/live.ts).
 
 ## Data model
 
@@ -189,6 +222,7 @@ type Item = {
   createdAt: number;
   updatedAt: number;
   shareId: string | null;  // set while a public link is on
+  shareRole?: "view" | "edit"; // what the link allows (absent = view)
 };
 ```
 

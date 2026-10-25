@@ -1,6 +1,7 @@
 "use client";
 
-import type { Body, Item, Kind, PublicUser, Usage } from "./types";
+import type { SharedEntry } from "./shared";
+import type { Body, Item, Kind, PublicUser, ShareRole, Usage } from "./types";
 
 // Thin fetch wrappers for the browser. Errors carry the server's readable message.
 
@@ -35,7 +36,9 @@ export const drive = {
     api<{ item: Item }>(`/api/items/${id}`, { method: "PATCH", json: patch }).then((r) => r.item),
   remove: (id: string) => api(`/api/items/${id}`, { method: "DELETE" }),
   copy: (id: string) => api<{ item: Item }>(`/api/items/${id}/copy`, { method: "POST" }).then((r) => r.item),
-  share: (id: string, on: boolean) => api<{ item: Item }>(`/api/items/${id}/share`, { method: "POST", json: { on } }).then((r) => r.item),
+  share: (id: string, on: boolean, role?: ShareRole) => api<{ item: Item }>(`/api/items/${id}/share`, { method: "POST", json: { on, role } }).then((r) => r.item),
+  shared: () => api<{ shared: SharedEntry[] }>("/api/shared").then((r) => r.shared),
+  forgetShared: (shareId: string) => api("/api/shared", { method: "DELETE", json: { shareId } }),
   emptyTrash: () => api("/api/trash", { method: "DELETE" }),
   body: <B extends Body>(id: string) => api<{ item: Item; body: B }>(`/api/items/${id}/body`),
   save: (id: string, body: Body) => api<{ item: Item }>(`/api/items/${id}/body`, { method: "PUT", json: body }).then((r) => r.item),

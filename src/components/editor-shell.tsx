@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Check, CloudOff, Copy, FileDown, Link2, Loader2, Printer, Share2, Star, Trash2 } from "lucide-react";
+import { Check, CloudOff, Copy, FileDown, Globe, Link2, Loader2, Lock, Printer, Share2, Star, Trash2 } from "lucide-react";
 import { drive } from "@/lib/client";
-import { EDITOR_PATH, type Body, type EditableKind, type Item } from "@/lib/types";
+import { EDITOR_PATH, type Body, type EditableKind, type Item, type ShareRole } from "@/lib/types";
 import { AppTile } from "./app-icon";
 import { AccountMenu, Launcher, ThemeToggle } from "./shell";
 import { Dropdown, Modal, useToast, type MenuEntry } from "./ui";
@@ -16,7 +16,7 @@ export type SaveState = "saved" | "saving" | "dirty" | "error";
  * Debounced autosave for an editor body. Call `changed(body)` on every edit; the latest body is
  * saved 800 ms after typing stops, and flushed when the tab is hidden or closed.
  */
-export function useAutosave(id: string, onSaved: (item: Item) => void) {
+export function useAutosave(id: string, onSaved: (item: Item) => void, save: (id: string, body: Body) => Promise<Item> = drive.save) {
   const [state, setState] = useState<SaveState>("saved");
   const pending = useRef<Body | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -35,8 +35,7 @@ export function useAutosave(id: string, onSaved: (item: Item) => void) {
     if (!body) return;
     pending.current = null;
     setState("saving");
-    inflight.current = drive
-      .save(id, body)
+    inflight.current = save(id, body)
       .then((item) => {
         savedCb.current(item);
         setState(pending.current ? "dirty" : "saved");
@@ -51,7 +50,7 @@ export function useAutosave(id: string, onSaved: (item: Item) => void) {
         inflight.current = null;
       });
     await inflight.current;
-  }, [id]);
+  }, [id, save]);
   useEffect(() => {
     retry.current = () => void flush();
   }, [flush]);
@@ -107,48 +106,78 @@ export function ShareDialog({ item, onChange, onClose }: { item: Item; onChange:
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const link = item.shareId ? `${location.origin}/s/${item.shareId}` : "";
+  const role = item.shareRole ?? "view";
+  // Live co-editing through a link is a Docs feature; other files are shared for viewing.
+  const editable = item.kind === "doc";
+  const apply = async (on: boolean, next: ShareRole = role) => {
+    setBusy(true);
+    try {
+      onChange(await drive.share(item.id, on, next));
+    } catch (e) {
+      toast((e as Error).message, "error");
+    }
+    setBusy(false);
+  };
   return (
-    <Modal title={`Share “${item.name}”`} onClose={onClose}>
-      <div className="flex items-start gap-3 rounded-xl border border-line p-3">
-        <Link2 size={20} className="mt-0.5 text-accent" />
-        <div className="flex-1">
-          <div className="text-sm font-medium">Anyone with the link can view</div>
-          <div className="text-xs text-muted">Read-only. Turn it off any time and the link stops working.</div>
+    <Modal title={`Share “${item.name}”`} onClose={onClose} width={500}>
+      <div className="text-sm font-medium">General access</div>
+      <div className="mt-2 flex items-center gap-3 rounded-xl border border-line p-3">
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${link ? "bg-[#dcfce7] text-[#15803d]" : "bg-surface-2 text-muted"}`}>
+          {link ? <Globe size={18} /> : <Lock size={18} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <select
+            aria-label="Who can open the link"
+            className="-ml-1 rounded-md bg-transparent px-1 py-0.5 text-sm font-medium hover:bg-hover"
+            value={link ? "anyone" : "restricted"}
+            disabled={busy}
+            onChange={(e) => void apply(e.target.value === "anyone")}
+          >
+            <option value="restricted">Restricted</option>
+            <option value="anyone">Anyone with the link</option>
+          </select>
+          <div className="text-xs text-muted">
+            {!link
+              ? "Only you can open this file."
+              : role === "edit"
+                ? "Anyone on the internet with the link can edit, live, without an account."
+                : "Anyone on the internet with the link can view."}
+          </div>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={Boolean(item.shareId)}
-          aria-label="Public link"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              onChange(await drive.share(item.id, !item.shareId));
-            } catch (e) {
-              toast((e as Error).message, "error");
-            }
-            setBusy(false);
-          }}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition ${item.shareId ? "bg-accent" : "bg-line"}`}
-        >
-          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${item.shareId ? "left-[22px]" : "left-0.5"}`} />
-        </button>
+        {link && (
+          <select
+            aria-label="Link role"
+            className="rounded-md border border-line bg-surface px-2 py-1 text-sm"
+            value={role}
+            disabled={busy}
+            onChange={(e) => void apply(true, e.target.value as ShareRole)}
+          >
+            <option value="view">Viewer</option>
+            <option value="edit" disabled={!editable}>
+              Editor{editable ? "" : " (Docs only)"}
+            </option>
+          </select>
+        )}
       </div>
       {link && (
         <div className="mt-3 flex gap-2">
-          <input className="input font-mono text-xs" readOnly value={link} onFocus={(e) => e.target.select()} />
+          <input className="input font-mono text-xs" readOnly value={link} onFocus={(e) => e.target.select()} aria-label="Link" />
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => {
-              void navigator.clipboard.writeText(link);
+              void navigator.clipboard?.writeText(link).catch(() => {});
               toast("Link copied");
             }}
           >
-            <Copy size={15} /> Copy
+            <Copy size={15} /> Copy link
           </button>
         </div>
+      )}
+      {link && editable && (
+        <p className="mt-3 text-xs text-muted">
+          Everyone with the document open sees each other&apos;s cursors and edits as they happen. Turn the link off at any time and it stops working.
+        </p>
       )}
     </Modal>
   );
