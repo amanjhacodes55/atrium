@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /$
+# Shared links and workspaces are private by default; keep them out of search results.
+Disallow: /s/
+Disallow: /api/
+Disallow: /home
+Disallow: /drive
+Disallow: /docs/
+Disallow: /sheets/
+Disallow: /slides/
+Disallow: /notebook/
