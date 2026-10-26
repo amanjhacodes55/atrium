@@ -179,6 +179,11 @@ The demo video is recorded from the running app with Playwright and narrated wit
 Comments and suggestions in Docs, version history, live co-editing in Sheets and Slides, folder sharing, mail and
 calendar. Ideas and pull requests are welcome.
 
+## Support
+
+Atrium is free and open source. If it saves you time or money, you can **buy me a coffee** ☕ over UPI
+(Google Pay, PhonePe, Paytm, BHIM) at **+91 8941951465**. Starring the repository helps too.
+
 ## Licence
 
 Atrium is free software: you can redistribute it and/or modify it under the terms of the
