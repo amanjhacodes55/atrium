@@ -24,6 +24,7 @@
   --app-slides: #ea580c;
   --app-drive: #ca8a04;
   --app-notebook: #7c3aed;
+  --app-pdf: #e5322d;
   --paper: #ffffff;
 }
 
@@ -48,6 +49,7 @@
   --app-slides: #fb923c;
   --app-drive: #facc15;
   --app-notebook: #c084fc;
+  --app-pdf: #f87171;
   /* Pages stay white in dark mode, like a real sheet of paper on a dark desk. */
   --paper: #ffffff;
 }

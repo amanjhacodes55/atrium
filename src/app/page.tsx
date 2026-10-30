@@ -13,6 +13,7 @@ const DETAILS: Record<string, string[]> = {
   slides: ["Text, shapes, images, themes, speaker notes", "Save as PowerPoint (.pptx) or PDF", "Full-screen presenter with keyboard control"],
   drive: ["Folders, drag-and-drop uploads, previews", "Star, search, move, trash and restore", "Public links for any file, and a Shared with me list"],
   notebook: ["Notebooks with coloured sections and pages", "Checklists, rich text and images on every page", "Search across pages, autosaves as you type"],
+  pdf: ["Merge, split, create and edit PDFs: text, images, signatures", "OCR scans into searchable PDFs, in 18 languages", "PDF to Word and Word to PDF, all on your device"],
 };
 
 const FEATURES = [
@@ -94,8 +95,8 @@ export default async function Landing() {
       </section>
 
       <section id="apps" className="mx-auto w-full max-w-6xl px-4 py-14">
-        <h2 className="text-center text-2xl font-semibold sm:text-3xl">Five apps. One login. One drive.</h2>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <h2 className="text-center text-2xl font-semibold sm:text-3xl">Six apps. One login. One drive.</h2>
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {APPS.map((a) => (
             <div key={a.kind} className="card p-5">
               <AppTile kind={a.kind} size={44} />

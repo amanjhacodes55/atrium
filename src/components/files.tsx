@@ -8,10 +8,12 @@ import {
   Copy,
   ExternalLink,
   Folder,
+  FilePen,
   FolderInput,
   MoreVertical,
   Pencil,
   RotateCcw,
+  Scissors,
   Share2,
   Star,
   Trash2,
@@ -249,6 +251,11 @@ export function FileList({
             router.push(`${EDITOR_PATH[kind]}/${created.id}`);
           }),
       });
+    if (item.kind === "file" && (item.mime === "application/pdf" || /\.pdf$/i.test(item.name)))
+      entries.push(
+        { label: "Edit PDF", icon: <FilePen size={16} />, onClick: () => router.push(`/pdf/edit?item=${item.id}`) },
+        { label: "Split PDF", icon: <Scissors size={16} />, onClick: () => router.push(`/pdf/split?item=${item.id}`) },
+      );
     if (item.kind === "file") entries.push({ label: "Download", icon: <ArrowDownToLine size={16} />, onClick: () => window.open(`/api/items/${item.id}/file?download`, "_self") });
     entries.push(
       "sep",

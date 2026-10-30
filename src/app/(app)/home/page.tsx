@@ -76,7 +76,7 @@ export default function HomePage() {
         </h1>
         <p className="mt-1 text-sm text-muted">Everything you need to get work done, in one place.</p>
 
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {APPS.map((a) => (
             <div key={a.kind} className="card group relative flex flex-col gap-3 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
               <Link href={a.href} className="absolute inset-0" aria-label={a.name} />
@@ -85,7 +85,7 @@ export default function HomePage() {
                 <div className="font-semibold">{a.name}</div>
                 <div className="text-xs text-muted">{a.blurb}</div>
               </div>
-              {a.kind !== "drive" && (
+              {a.kind !== "drive" && a.kind !== "pdf" && (
                 <button
                   type="button"
                   onClick={() => void create(a.kind as EditableKind)}

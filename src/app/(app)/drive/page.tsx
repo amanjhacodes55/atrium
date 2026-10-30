@@ -138,7 +138,7 @@ function DriveView() {
               { label: "New folder", icon: <FolderPlus size={16} />, onClick: () => setNewFolder(true) },
               { label: "Upload files", icon: <Upload size={16} />, onClick: () => fileInput.current?.click() },
               "sep",
-              ...APPS.filter((a) => a.kind !== "drive").map((a) => ({
+              ...APPS.filter((a) => a.kind !== "drive" && a.kind !== "pdf").map((a) => ({
                 label: a.kind === "doc" ? "Document" : a.kind === "sheet" ? "Spreadsheet" : a.kind === "slides" ? "Presentation" : "Notebook",
                 icon: <AppTile kind={a.kind} size={18} />,
                 onClick: () => void create(a.kind as EditableKind),

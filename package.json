@@ -44,10 +44,13 @@
     "lucide-react": "^1.61.0",
     "mammoth": "^1.13.0",
     "next": "^16.4.3",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.6.205",
     "pptxgenjs": "^4.0.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "ssf": "^0.11.2",
+    "tesseract.js": "^7.0.0",
     "y-protocols": "^1.0.7",
     "yjs": "^13.6.33",
     "zod": "^4.6.7"

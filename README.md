@@ -4,7 +4,7 @@
 
 # Atrium
 
-**A free, open-source office suite: Docs, Sheets, Slides, Drive and Notebook in one Next.js app.**
+**A free, open-source office suite: Docs, Sheets, Slides, Drive, Notebook and PDF tools in one Next.js app, with an Android app.**
 
 Like Microsoft 365 or Zoho Workplace, without the subscription. It opens and saves Word, Excel and PowerPoint files.
 
@@ -61,6 +61,15 @@ workspace with sample files in every app.
 **📓 Notebook**: notes like OneNote
 - Notebooks with coloured sections and pages.
 - Rich text, checklists and images on every page, and search across all your pages.
+
+**📄 PDF**: tools like iLovePDF, that run on your own device
+- **Merge** PDFs in the order you choose, and **split** them by page ranges, by picked pages or into single pages.
+- **Edit**: add text, images and signatures, draw, highlight, white out and draw boxes; rotate, reorder and delete
+  pages; add page numbers and a watermark.
+- **Create** a PDF from photos and scans, on A4, Letter or the image's own size.
+- **OCR**: make scanned PDFs and photos searchable and copyable, in 18 languages including Hindi.
+- **PDF to Word** (or straight into Atrium Docs) and **Word to PDF** (from a .docx or any of your Atrium documents).
+- Nothing is uploaded: files are read and written in the browser. *Save to Drive* keeps a result in your drive.
 
 **Across the suite**
 - **Autosave**: every change is saved within a second, and the save is retried if you go offline.
@@ -155,6 +164,8 @@ See the [API reference](docs/api.md) for every endpoint.
 | Live editing    | [Yjs](https://yjs.dev) CRDT relayed over HTTP polling, so it runs on serverless functions with no socket server |
 | Sheets          | [HyperFormula](https://hyperformula.handsontable.com/) for formulas; [ExcelJS](https://github.com/exceljs/exceljs) for .xlsx |
 | Slides          | A custom canvas editor; [PptxGenJS](https://gitbrent.github.io/PptxGenJS/) and JSZip for .pptx         |
+| PDF             | [pdf-lib](https://pdf-lib.js.org) to write, [PDF.js](https://mozilla.github.io/pdf.js/) to read and draw, [Tesseract.js](https://tesseract.projectnaptha.com) for OCR |
+| Android         | Kotlin and Jetpack Compose; the editors and PDF tools run in a WebView                                 |
 | Storage         | Netlify Blobs on Netlify, plain files everywhere else                                                  |
 | Auth            | Email and password (scrypt), hashed session tokens in an HttpOnly cookie                              |
 

@@ -1,4 +1,4 @@
-import { FileText, Folder, HardDrive, NotebookPen, Presentation, Sheet, File, FileImage, FileVideo, FileAudio, FileArchive, FileCode } from "lucide-react";
+import { FileText, Folder, HardDrive, NotebookPen, Presentation, Sheet, File, FileImage, FileVideo, FileAudio, FileArchive, FileCode, FileStack } from "lucide-react";
 import type { Item, Kind } from "@/lib/types";
 
 export const APPS = [
@@ -7,6 +7,7 @@ export const APPS = [
   { kind: "slides", name: "Slides", href: "/slides", color: "var(--app-slides)", Icon: Presentation, blurb: "Build presentations" },
   { kind: "drive", name: "Drive", href: "/drive", color: "var(--app-drive)", Icon: HardDrive, blurb: "Store every file" },
   { kind: "notebook", name: "Notebook", href: "/notebook", color: "var(--app-notebook)", Icon: NotebookPen, blurb: "Take notes" },
+  { kind: "pdf", name: "PDF", href: "/pdf", color: "var(--app-pdf)", Icon: FileStack, blurb: "Merge, split, edit, OCR" },
 ] as const;
 
 export type AppKind = (typeof APPS)[number]["kind"];
