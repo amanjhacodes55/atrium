@@ -294,6 +294,7 @@ const outroText = "Download the app from the GitHub releases page. It's free and
   const vo = voice(outroText);
   const bg = path.join(BUILD, "outro.png");
   await card.setContent(fs.readFileSync(path.join(HERE, "outro.html"), "utf8").replace("One click to Netlify, or self-host with Docker", "Android app: github.com/amanjhacodes55/atrium/releases"), { waitUntil: "load" });
+  await card.evaluate(() => document.body.classList.add("in")); // the card's text fades in on this class
   await sleep(1200);
   await card.screenshot({ path: bg });
   const out = path.join(BUILD, "beat99.mp4");

@@ -5,6 +5,7 @@ server as the web app, so accounts, files and sharing are the same on both.
 
 **[Download the APK](https://github.com/amanjhacodes55/atrium/releases/download/android-v1.0.0/atrium-android-v1.0.0.apk)**
 (Android 8.0+). Open it on your phone and allow installing from your browser when asked.
+[**Watch the demo video**](../docs/media/atrium-android.mp4) (68 seconds).
 
 ## What it does
 
