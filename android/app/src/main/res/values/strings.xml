@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Atrium</string>
+    <string name="editor_offline">Couldn\'t load this page. Check your connection and try again.</string>
+    <string name="retry">Try again</string>
+    <string name="no_app_for_link">No app can open this link.</string>
+    <string name="no_file_picker">No app can pick files on this device.</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Photos taken with the camera from a web page's file picker (Create PDF, OCR). -->
+<paths>
+    <cache-path name="camera" path="camera/" />
+</paths>

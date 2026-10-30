@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Atrium" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/plane</item>
+        <item name="android:colorAccent">@color/accent</item>
+    </style>
+
+    <color name="plane">#0F1115</color>
+    <color name="accent">#60A5FA</color>
+    <color name="ink">#EEF0F3</color>
+</resources>

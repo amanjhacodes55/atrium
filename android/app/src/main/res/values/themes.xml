@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose draws the UI; the window theme only sets the background so launch has no flash. -->
+    <style name="Theme.Atrium" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/plane</item>
+        <item name="android:colorAccent">@color/accent</item>
+    </style>
+
+    <color name="plane">#F5F6F8</color>
+    <color name="accent">#2563EB</color>
+    <color name="ink">#111827</color>
+</resources>
