@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { ArrowRight, Cloud, FileStack, Lock, Share2, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Cloud, Download, FileStack, Lock, Share2, Smartphone, Sparkles, Users } from "lucide-react";
 import { APPS, AppTile, GithubMark, Logo } from "@/components/app-icon";
 import { GuestButton } from "@/components/auth-form";
 import { COOKIE } from "@/lib/auth-cookie";
 
 const REPO = "https://github.com/amanjhacodes55/atrium";
+/** The Android app, published as a GitHub release (see android/README.md). */
+const APK = `${REPO}/releases/download/android-v1.0.0/atrium-android-v1.0.0.apk`;
 
 const DETAILS: Record<string, string[]> = {
   doc: ["Write together live, with everyone's cursor on the page", "Real A4 and Letter pages, split line by line like Word", "Open and save Word (.docx), export PDF, HTML, Markdown"],
@@ -39,6 +41,9 @@ export default async function Landing() {
             </a>
             <a href="#features" className="hover:text-ink">
               Features
+            </a>
+            <a href="#android" className="hover:text-ink">
+              Android app
             </a>
             <a href={REPO} className="hover:text-ink">
               GitHub
@@ -126,6 +131,26 @@ export default async function Landing() {
         </div>
       </section>
 
+      <section id="android" className="mx-auto w-full max-w-6xl px-4 pt-16">
+        <div className="card flex flex-col items-center gap-6 p-8 text-center md:flex-row md:text-left">
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-accent/10 text-accent">
+            <Smartphone size={30} />
+          </span>
+          <div className="flex-1">
+            <h2 className="text-2xl font-semibold">Atrium for Android</h2>
+            <p className="mt-2 text-ink-2">
+              Your Drive in your pocket: browse, create, upload and share files, and open Atrium links straight in the app. It uses the same account as the website.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-center gap-1.5">
+            <a href={APK} className="btn btn-primary h-12 px-6 text-base" id="download-android">
+              <Download size={18} /> Download for Android
+            </a>
+            <span className="text-xs text-muted">APK · Android 8.0 or newer · 12 MB</span>
+          </div>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-3xl px-4 py-20 text-center">
         <h2 className="text-2xl font-semibold sm:text-3xl">Built in the open, free for the world</h2>
         <p className="mt-4 text-ink-2">
@@ -147,6 +172,9 @@ export default async function Landing() {
           <div className="flex-1" />
           <a href={REPO} className="hover:text-ink">
             Source code
+          </a>
+          <a href={APK} className="hover:text-ink">
+            Android app
           </a>
           <a href={`${REPO}/blob/main/docs/api.md`} className="hover:text-ink">
             API docs
