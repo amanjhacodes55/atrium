@@ -7,7 +7,7 @@ import { COOKIE } from "@/lib/auth-cookie";
 
 const REPO = "https://github.com/amanjhacodes55/atrium";
 /** The Android app, published as a GitHub release (see android/README.md). */
-const APK = `${REPO}/releases/download/android-v1.0.0/atrium-android-v1.0.0.apk`;
+const APK = `${REPO}/releases/download/android-v1.1.0/atrium-android-v1.1.0.apk`;
 
 const DETAILS: Record<string, string[]> = {
   doc: ["Write together live, with everyone's cursor on the page", "Real A4 and Letter pages, split line by line like Word", "Open and save Word (.docx), export PDF, HTML, Markdown"],

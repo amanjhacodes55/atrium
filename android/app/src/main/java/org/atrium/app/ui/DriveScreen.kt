@@ -91,6 +91,8 @@ fun DriveScreen(vm: AppViewModel, user: User, state: DriveState, message: String
     var tab by rememberSaveable { mutableStateOf(Tab.MY_DRIVE) }
     var folderId by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
+    /** An app from the Apps row (Docs, Sheets, …): the drive shows just its files. */
+    var app by rememberSaveable { mutableStateOf<AtriumApp?>(null) }
     var actionsFor by remember { mutableStateOf<Item?>(null) }
     var showCreate by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
@@ -107,9 +109,10 @@ fun DriveScreen(vm: AppViewModel, user: User, state: DriveState, message: String
         }
     }
 
-    BackHandler(enabled = query.isNotEmpty() || (tab == Tab.MY_DRIVE && folderId != null) || tab != Tab.MY_DRIVE) {
+    BackHandler(enabled = query.isNotEmpty() || app != null || (tab == Tab.MY_DRIVE && folderId != null) || tab != Tab.MY_DRIVE) {
         when {
             query.isNotEmpty() -> query = ""
+            app != null -> app = null
             tab == Tab.MY_DRIVE && folderId != null -> folderId = byId[folderId]?.parentId
             else -> tab = Tab.MY_DRIVE
         }
@@ -141,7 +144,15 @@ fun DriveScreen(vm: AppViewModel, user: User, state: DriveState, message: String
         floatingActionButton = {
             if (tab != Tab.TRASH) {
                 FloatingActionButton(
-                    onClick = { showCreate = true },
+                    onClick = {
+                        // In an app, + makes one of its files straight away; PDF starts the Create tool.
+                        val kind = app?.kind
+                        when {
+                            app == AtriumApp.PDF -> host.openPdfTool(PdfTool.CREATE.path)
+                            kind != null -> vm.create(kind, null, null) { open(it) }
+                            else -> showCreate = true
+                        }
+                    },
                     containerColor = Atrium.colors.accent,
                     contentColor = Color.White,
                 ) { Icon(painterResource(R.drawable.ic_add), contentDescription = "New") }
@@ -154,6 +165,7 @@ fun DriveScreen(vm: AppViewModel, user: User, state: DriveState, message: String
                         selected = tab == t,
                         onClick = {
                             if (tab == t && t == Tab.MY_DRIVE) folderId = null
+                            app = null
                             tab = t
                             query = ""
                         },
@@ -181,7 +193,8 @@ fun DriveScreen(vm: AppViewModel, user: User, state: DriveState, message: String
             val q = query.trim().lowercase()
             val live = items.filter { !it.trashed }
             val shown: List<Item> = when {
-                q.isNotEmpty() -> sortItems(live.filter { it.name.lowercase().contains(q) })
+                q.isNotEmpty() -> sortItems(live.filter { it.name.lowercase().contains(q) && app?.holds(it) != false })
+                app != null -> live.filter { app!!.holds(it) }.sortedByDescending { it.updatedAt }
                 tab == Tab.RECENT -> live.filter { it.kind != Kind.FOLDER }.sortedByDescending { it.updatedAt }.take(50)
                 tab == Tab.STARRED -> sortItems(live.filter { it.starred })
                 tab == Tab.SHARED -> sortItems(live.filter { it.shareId != null })
@@ -192,17 +205,27 @@ fun DriveScreen(vm: AppViewModel, user: User, state: DriveState, message: String
             }
 
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
-                if (q.isEmpty() && (tab == Tab.RECENT || (tab == Tab.MY_DRIVE && folderId == null))) {
+                if (q.isEmpty() && app == null && (tab == Tab.RECENT || (tab == Tab.MY_DRIVE && folderId == null))) {
+                    item(key = "apps") {
+                        AppsStrip {
+                            app = it
+                            folderId = null
+                        }
+                    }
+                }
+                if (q.isEmpty() && (app == AtriumApp.PDF || (app == null && (tab == Tab.RECENT || (tab == Tab.MY_DRIVE && folderId == null))))) {
                     item(key = "pdf-tools") { PdfToolsStrip { host.openPdfTool(it.path) } }
                 }
                 item(key = "header") {
                     Header(
                         title = when {
                             q.isNotEmpty() -> "Results for “${query.trim()}”"
+                            app != null -> app!!.label
                             tab == Tab.SHARED -> "Shared"
                             else -> tab.label
                         },
-                        trail = if (tab == Tab.MY_DRIVE && q.isEmpty()) trail(folderId, byId) else emptyList(),
+                        trail = if (tab == Tab.MY_DRIVE && q.isEmpty() && app == null) trail(folderId, byId) else emptyList(),
+                        onBack = app?.let { { app = null } },
                         onCrumb = { folderId = it },
                         action = if (tab == Tab.TRASH && q.isEmpty() && shown.isNotEmpty()) ("Empty trash" to { vm.emptyTrash() }) else null,
                         uploading = state.uploading,
@@ -222,17 +245,17 @@ fun DriveScreen(vm: AppViewModel, user: User, state: DriveState, message: String
                 if (state.items == null && state.error == null) {
                     item(key = "loading") { Hint("Loading…") }
                 } else if (shown.isEmpty() && !(tab == Tab.SHARED && q.isEmpty() && state.shared.isNotEmpty())) {
-                    item(key = "empty") { Hint(emptyText(tab, q.isNotEmpty(), folderId != null)) }
+                    item(key = "empty") { Hint(app?.takeIf { q.isEmpty() }?.empty ?: emptyText(tab, q.isNotEmpty(), folderId != null)) }
                 }
                 items(shown, key = { it.id }) { item ->
                     ItemRow(
                         item = item,
-                        location = if (q.isNotEmpty() || tab != Tab.MY_DRIVE) item.parentId?.let { byId[it]?.name } else null,
+                        location = if (q.isNotEmpty() || app != null || tab != Tab.MY_DRIVE) item.parentId?.let { byId[it]?.name } else null,
                         onOpen = { if (item.trashed) actionsFor = item else open(item) },
                         onMore = { actionsFor = item },
                     )
                 }
-                if (tab == Tab.MY_DRIVE && folderId == null && q.isEmpty()) {
+                if (tab == Tab.MY_DRIVE && folderId == null && q.isEmpty() && app == null) {
                     state.usage?.let { u -> item(key = "usage") { StorageCard(u.used, u.quota, u.fraction) } }
                 }
             }
@@ -345,9 +368,12 @@ fun Avatar(name: String, size: Int = 40, onClick: (() -> Unit)? = null) {
 }
 
 @Composable
-private fun Header(title: String, trail: List<Item>, onCrumb: (String?) -> Unit, action: Pair<String, () -> Unit>?, uploading: Int) {
-    Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)) {
+private fun Header(title: String, trail: List<Item>, onCrumb: (String?) -> Unit, action: Pair<String, () -> Unit>?, uploading: Int, onBack: (() -> Unit)? = null) {
+    Column(Modifier.padding(start = if (onBack != null) 4.dp else 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            onBack?.let {
+                IconButton(onClick = it) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = "Back to the drive", tint = Atrium.colors.ink) }
+            }
             if (trail.isEmpty()) {
                 Text(title, style = MaterialTheme.typography.titleLarge, color = Atrium.colors.ink, modifier = Modifier.weight(1f))
             } else {

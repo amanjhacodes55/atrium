@@ -26,6 +26,9 @@
   --app-notebook: #7c3aed;
   --app-pdf: #e5322d;
   --paper: #ffffff;
+  /* The grey desk PDF pages sit on, as in Acrobat. */
+  --pdf-canvas: #e4e5e8;
+  --pdf-canvas-ink: #5f6470;
 }
 
 :root[data-theme="dark"] {
@@ -52,6 +55,8 @@
   --app-pdf: #f87171;
   /* Pages stay white in dark mode, like a real sheet of paper on a dark desk. */
   --paper: #ffffff;
+  --pdf-canvas: #2a2c31;
+  --pdf-canvas-ink: #9aa0ab;
 }
 
 @theme inline {
@@ -89,6 +94,30 @@ body {
 /* ---- Small component kit ----
    In the components layer so Tailwind utilities on the same element (pl-10, md:hidden) win. */
 @layer components {
+  /* Acrobat's red, for the PDF tools' main action. */
+  .btn.btn-pdf {
+    background: #e5322d;
+    border-color: #e5322d;
+    color: #fff;
+  }
+  .btn.btn-pdf:hover {
+    background: #c9221d;
+    border-color: #c9221d;
+  }
+  /* The small dark buttons that float on a PDF page. */
+  .page-tool {
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.4rem;
+    background: rgba(17, 24, 39, 0.78);
+    color: #fff;
+    transition: background 0.15s;
+  }
+  .page-tool:hover { background: rgba(17, 24, 39, 0.95); }
+  .page-tool:disabled { opacity: 0.35; pointer-events: none; }
+
   .btn {
     display: inline-flex;
     align-items: center;
@@ -480,3 +509,8 @@ body {
 
 /* Netlify's injected badge (also removed by a script in the layout). */
 #nl-badge-frame, [id^="nl-badge"] { display: none !important; }
+
+/* PDF pages settle onto the canvas. */
+@keyframes pdf-page-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+.pdf-page-in { animation: pdf-page-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) { .pdf-page-in { animation: none; } }

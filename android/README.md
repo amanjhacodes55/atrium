@@ -3,7 +3,7 @@
 A native Android app (Kotlin + Jetpack Compose, Material 3) for [Atrium](../README.md). It talks to the same
 server as the web app, so accounts, files and sharing are the same on both.
 
-**[Download the APK](https://github.com/amanjhacodes55/atrium/releases/download/android-v1.0.0/atrium-android-v1.0.0.apk)**
+**[Download the APK](https://github.com/amanjhacodes55/atrium/releases/download/android-v1.1.0/atrium-android-v1.1.0.apk)**
 (Android 8.0+). Open it on your phone and allow installing from your browser when asked.
 [**Watch the demo video**](../docs/media/atrium-android.mp4) (68 seconds).
 
