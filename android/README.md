@@ -66,8 +66,13 @@ The app uses `https://atrium-office.netlify.app` by default. To build it for a s
 ```
 
 That changes the API, the editor pages and the host name that links open in the app. The server must be
-served over HTTPS, because Android blocks plain HTTP. To try a local server on the emulator, put it behind an
-HTTPS tunnel and use that address.
+served over HTTPS, because Android blocks plain HTTP. Debug builds make one exception, `localhost`, so you can
+try a local server on an emulator or a phone plugged in over USB:
+
+```bash
+adb reverse tcp:3000 tcp:3000                # the device's localhost:3000 is this computer's
+./gradlew installDebug -PatriumBaseUrl=http://localhost:3000
+```
 
 ## Code layout
 

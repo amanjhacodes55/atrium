@@ -3,6 +3,7 @@ package org.atrium.app.ui
 import android.app.Application
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,6 +70,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         } catch (e: IOException) {
             // Offline at launch: keep whatever the cookie says and let pull-to-refresh retry.
+            Log.w("Atrium", "session check failed", e)
             _session.value = Session.SignedOut
             _auth.value = AuthState(error = "Can't reach ${repo.baseUrl.substringAfter("://")}. Check your connection.")
         }
@@ -91,6 +93,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         } catch (e: ApiException) {
             _auth.value = AuthState(error = e.message, field = e.field)
         } catch (e: IOException) {
+            Log.w("Atrium", "sign-in failed", e)
             _auth.value = AuthState(error = "Couldn't reach the server. Check your connection.")
         }
     }

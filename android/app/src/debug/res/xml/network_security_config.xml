@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug builds only: lets the app reach a development server on this computer over plain HTTP.
+  Forward the port with `adb reverse tcp:3000 tcp:3000` and build with -PatriumBaseUrl=http://localhost:3000
+  (Android 17 blocks apps from 10.0.2.2 and other local addresses without a runtime permission).
+  Everything else still needs HTTPS.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>
